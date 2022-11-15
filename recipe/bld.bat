@@ -31,6 +31,3 @@ if errorlevel 1 exit 1
 
 copy qpoases.cp*.pyd %SP_DIR%
 if errorlevel 1 exit 1
-
-echo "dir SP_DIR"
-dir %SP_DIR%

@@ -1,11 +1,12 @@
-From 140628ff863ccc41573a6ed0c4112558e39ad419 Mon Sep 17 00:00:00 2001
+From 7e310e669df998881db10be0237e078351b88011 Mon Sep 17 00:00:00 2001
 From: Fabian Schramm <55981657+fabinsch@users.noreply.github.com>
 Date: Tue, 15 Nov 2022 17:06:55 +0100
 Subject: [PATCH] fix python interface
 
 ---
- interfaces/python/setup.py | 12 ++++++++----
- 1 file changed, 8 insertions(+), 4 deletions(-)
+ interfaces/python/setup.py               | 12 ++++++++----
+ interfaces/python/tests/test_examples.py | 10 +++++-----
+ 2 files changed, 13 insertions(+), 9 deletions(-)
 
 diff --git a/interfaces/python/setup.py b/interfaces/python/setup.py
 index 913f8da..a003063 100755
@@ -48,6 +49,41 @@ index 913f8da..a003063 100755
          "-D__USE_LONG_FINTS__",
          "-D__NO_COPYRIGHT__",
      ]
+diff --git a/interfaces/python/tests/test_examples.py b/interfaces/python/tests/test_examples.py
+index a345188..ee45d8b 100644
+--- a/interfaces/python/tests/test_examples.py
++++ b/interfaces/python/tests/test_examples.py
+@@ -152,8 +152,8 @@ class TestExamples(TestCase):
+         xOpt_actual = np.asarray(xOpt_actual, dtype=float)
+         objVal_actual = qp.getObjVal()
+         objVal_actual = np.asarray(objVal_actual, dtype=float)
+-        print 'xOpt_actual:', xOpt_actual
+-        print 'objVal_actual:', objVal_actual
++        print("xOpt_actual =", xOpt_actual)
++        print("objVal_actual =", objVal_actual)
+ 
+         # Solve second QP.
+         nWSR = 10
+@@ -164,8 +164,8 @@ class TestExamples(TestCase):
+         xOpt_actual = np.asarray(xOpt_actual, dtype=float)
+         objVal_actual = qp.getObjVal()
+         objVal_actual = np.asarray(objVal_actual, dtype=float)
+-        print 'xOpt_actual:', xOpt_actual
+-        print 'objVal_actual:', objVal_actual
++        print("xOpt_actual =", xOpt_actual)
++        print("objVal_actual =", objVal_actual)
+ 
+         # Get and print solution of second QP.
+         xOpt_actual = np.zeros(2)
+@@ -189,7 +189,7 @@ class TestExamples(TestCase):
+ 
+         pattern = re.compile(r'objVal = (?P<objVal>[0-9-+e.]*)')
+         match = pattern.findall(stdout)
+-        print match
++        print(match)
+         objVal_expected = match[-1]
+         objVal_expected = np.asarray(objVal_expected, dtype=float)
+ 
 -- 
 2.25.1
 
