@@ -11,7 +11,7 @@ source:
   patches:
     - unreleased_changes.patch
     - unreleased_changes2.patch
-    - NEW_fix_python_interface.patch
+    - fix_python_interface.patch
 
 build:
   number: 1
@@ -20,9 +20,10 @@ build:
 
 requirements:
   build:
-    - make
+    - cmake
     - {{ compiler('cxx') }}
     - {{ compiler('c') }}
+    - ninja
     - python                                 # [build_platform != target_platform]
     - cross-python_{{ target_platform }}     # [build_platform != target_platform]
     - cython                                 # [build_platform != target_platform]
