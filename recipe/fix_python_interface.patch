@@ -1,0 +1,35 @@
+From 1361ca6131d841c22e3352a45c304f48adcd0c1c Mon Sep 17 00:00:00 2001
+From: Fabian Schramm <55981657+fabinsch@users.noreply.github.com>
+Date: Tue, 15 Nov 2022 10:05:50 +0100
+Subject: [PATCH] fix python interface
+
+---
+ interfaces/python/setup.py | 5 +++--
+ 1 file changed, 3 insertions(+), 2 deletions(-)
+
+diff --git a/interfaces/python/setup.py b/interfaces/python/setup.py
+index 913f8da..62a626f 100755
+--- a/interfaces/python/setup.py
++++ b/interfaces/python/setup.py
+@@ -59,7 +59,8 @@ extra_params['library_dirs'] = ['/usr/lib', os.path.join(BASEDIR, 'bin')]
+ extra_params['language'] = 'c++'
+ 
+ if platform.system() in ['Linux', 'Darwin']:
+-    extra_params['extra_compile_args'] = ['-D__USE_LONG_INTEGERS__',
++    extra_params['extra_compile_args'] = [
++            # '-D__USE_LONG_INTEGERS__',
+             '-D__USE_LONG_FINTS__']
+ 
+ if platform.system() == 'Darwin':
+@@ -89,7 +90,7 @@ if os.name == 'posix':
+         "-finline-functions",
+         "-fPIC",
+         "-DLINUX",
+-        "-D__USE_LONG_INTEGERS__",
++        # "-D__USE_LONG_INTEGERS__",
+         "-D__USE_LONG_FINTS__",
+         "-D__NO_COPYRIGHT__",
+     ]
+-- 
+2.25.1
+

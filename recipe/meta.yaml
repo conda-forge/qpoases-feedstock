@@ -11,9 +11,10 @@ source:
   patches:
     - unreleased_changes.patch
     - fix_cmake_version.patch
+    - fix_python_interface.patch
 
 build:
-  number: 0
+  number: 1
   run_exports:
     - {{ pin_subpackage(name, max_pin='x.x.x') }}
 
@@ -23,6 +24,16 @@ requirements:
     - {{ compiler('cxx') }}
     - {{ compiler('c') }}
     - ninja
+    - python                                 # [build_platform != target_platform]
+    - cross-python_{{ target_platform }}     # [build_platform != target_platform]
+    - cython                                 # [build_platform != target_platform]
+
+  host:
+    - numpy
+    - cython
+
+  run:
+    - python
 
 test:
   commands:
@@ -33,6 +44,9 @@ test:
     - if not exist %PREFIX%\\Library\\lib\\qpOASES.lib exit 1  # [win]
     # Compilation of Windows shared library is not supported (see https://github.com/coin-or/qpOASES/pull/109)
     # - if not exist %PREFIX%\\Library\\bin\\qpOASES.dll exit 1  # [win]
+
+  imports:
+    - qpoases
 
 about:
   home: https://github.com/coin-or/qpOASES
