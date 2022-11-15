@@ -1,17 +1,27 @@
-From 668f61ac543939d2a1e27c0c80514485552027b7 Mon Sep 17 00:00:00 2001
+From 140628ff863ccc41573a6ed0c4112558e39ad419 Mon Sep 17 00:00:00 2001
 From: Fabian Schramm <55981657+fabinsch@users.noreply.github.com>
 Date: Tue, 15 Nov 2022 17:06:55 +0100
 Subject: [PATCH] fix python interface
 
 ---
- interfaces/python/setup.py | 9 ++++++---
- 1 file changed, 6 insertions(+), 3 deletions(-)
+ interfaces/python/setup.py | 12 ++++++++----
+ 1 file changed, 8 insertions(+), 4 deletions(-)
 
 diff --git a/interfaces/python/setup.py b/interfaces/python/setup.py
-index 913f8da..e0b7b05 100755
+index 913f8da..a003063 100755
 --- a/interfaces/python/setup.py
 +++ b/interfaces/python/setup.py
-@@ -59,12 +59,15 @@ extra_params['library_dirs'] = ['/usr/lib', os.path.join(BASEDIR, 'bin')]
+@@ -49,7 +49,8 @@ extra_params['include_dirs'] = [
+     os.path.join(BASEDIR, 'include'),
+     os.path.join(BASEDIR, 'include', 'qpOASES'),
+     np.get_include()]
+-extra_params['extra_compile_args'] = ["-O2", "-Wno-unused-variable"]
++if platform.system() in ['Linux', 'Darwin']:
++    extra_params['extra_compile_args'] = ["-O2", "-Wno-unused-variable"]
+ extra_params['extra_link_args'] = ["-Wl,-O1", "-Wl,--as-needed"]
+ 
+ extra_params = extra_params.copy()
+@@ -59,12 +60,15 @@ extra_params['library_dirs'] = ['/usr/lib', os.path.join(BASEDIR, 'bin')]
  extra_params['language'] = 'c++'
  
  if platform.system() in ['Linux', 'Darwin']:
@@ -29,7 +39,7 @@ index 913f8da..e0b7b05 100755
      extra_params['extra_compile_args'] += ['-stdlib=libc++',
          '-Wno-c++11-long-long']
      extra_params['extra_link_args'] = ['-stdlib=libc++'] # override the others!
-@@ -89,7 +92,7 @@ if os.name == 'posix':
+@@ -89,7 +93,7 @@ if os.name == 'posix':
          "-finline-functions",
          "-fPIC",
          "-DLINUX",
