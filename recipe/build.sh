@@ -1,19 +1,14 @@
 #!/bin/sh
 # Ensure the version is correct in the sources
-grep 'PACKAGE_VERSION "'$PKG_VERSION'"' CMakeLists.txt
+echo "++++++++++++++++++++++++++++++ in build sh"
 
-mkdir build
-cd build
+echo "++++++++++++++++++++++++++++++  calling make"
+make
 
-cmake ${CMAKE_ARGS} -GNinja .. \
-      -DCMAKE_BUILD_TYPE=Release \
-      -DQPOASES_AVOID_LA_NAMING_CONFLICTS:BOOL=ON \
-      -DBUILD_SHARED_LIBS:BOOL=ON \
-      -DBUILD_TESTING:BOOL=ON ..
-
-cmake --build . --config Release
-cmake --build . --config Release --target install
-ctest --output-on-failure -C Release
-
-cd ../interfaces/python && python setup.py build_ext --inplace
+echo "++++++++++++++++++++++++++++++  build python"
+cd interfaces/python && python setup.py build_ext --inplace
+echo "running python -c import qpoases"
+python -c "import qpoases"
+echo "ldd qpoases.cpython-38-x86_64-linux-gnu.so"
+ldd qpoases.cpython-38-x86_64-linux-gnu.so
 cp qpoases.cpython-*.so $SP_DIR

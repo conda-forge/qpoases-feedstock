@@ -1,0 +1,1635 @@
+From 5288cea2d49e0e3e4adb003e06efaa840afbd220 Mon Sep 17 00:00:00 2001
+From: Fabian Schramm <55981657+fabinsch@users.noreply.github.com>
+Date: Tue, 15 Nov 2022 14:57:35 +0100
+Subject: [PATCH] unreleased changes 2
+
+---
+ AUTHORS                                   |   1 +
+ AUTHORS.txt                               |   1 +
+ CMakeLists.txt                            |   2 +-
+ Makefile                                  |  38 +-
+ README                                    |   2 +-
+ examples/qrecipe.cpp                      |   4 +-
+ examples/qrecipeSchur.cpp                 |  53 ++-
+ examples/qrecipe_data.hpp                 |  11 +-
+ include/qpOASES/LapackBlasReplacement.hpp | 256 +++++------
+ include/qpOASES/SQProblemSchur.hpp        |   1 -
+ include/qpOASES/SparseSolver.hpp          | 177 ++++++++
+ include/qpOASES/Types.hpp                 |   4 +-
+ interfaces/c/Makefile                     |   1 +
+ interfaces/matlab/make.m                  |   2 +-
+ make_linux.mk                             |  20 +-
+ src/BLASReplacement.cpp                   |   8 +-
+ src/LAPACKReplacement.cpp                 |   8 +-
+ src/Matrices.cpp                          |   6 +-
+ src/SQProblemSchur.cpp                    |  13 +-
+ src/SparseSolver.cpp                      | 525 +++++++++++++++++++++-
+ testing/cpp/test_qrecipeSchur.cpp         |   4 +
+ testing/cpp/test_smallSchur.cpp           |   5 +-
+ 22 files changed, 940 insertions(+), 202 deletions(-)
+
+diff --git a/AUTHORS b/AUTHORS
+index 925e8e7..e9ad01c 100644
+--- a/AUTHORS
++++ b/AUTHORS
+@@ -62,6 +62,7 @@ bugs or proposing algorithmic improvements (in alphabetical order):
+     Boris Houska
+     D. Kwame Minde Kufoalor
+     Aude Perrin
++    Silvio Traversaro
+     Milan Vukov
+     Thomas Wiese
+     Leonard Wirsching
+diff --git a/AUTHORS.txt b/AUTHORS.txt
+index 3f44c0c..012529d 100644
+--- a/AUTHORS.txt
++++ b/AUTHORS.txt
+@@ -62,6 +62,7 @@ bugs or proposing algorithmic improvements (in alphabetical order):
+     Boris Houska
+     D. Kwame Minde Kufoalor
+     Aude Perrin
++    Silvio Traversaro
+     Milan Vukov
+     Thomas Wiese
+     Leonard Wirsching
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 9ef6de7..06bbc79 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -33,7 +33,7 @@ cmake_minimum_required(VERSION 2.6)
+ 
+ PROJECT(qpOASES CXX)
+ SET(PACKAGE_NAME "qpOASES")
+-SET(PACKAGE_VERSION "3.2.0")
++SET(PACKAGE_VERSION "3.2.2")
+ SET(PACKAGE_SO_VERSION "3.2")
+ SET(PACKAGE_DESCRIPTION "An implementation of the online active set strategy")
+ SET(PACKAGE_AUTHOR "Hans Joachim Ferreau, Andreas Potschka, Christian Kirches et al.")
+diff --git a/Makefile b/Makefile
+index 9d83ab8..62097aa 100644
+--- a/Makefile
++++ b/Makefile
+@@ -12,7 +12,7 @@
+ ##
+ ##	qpOASES is distributed in the hope that it will be useful,
+ ##	but WITHOUT ANY WARRANTY; without even the implied warranty of
+-##	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. 
++##	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ ##	See the GNU Lesser General Public License for more details.
+ ##
+ ##	You should have received a copy of the GNU Lesser General Public
+@@ -36,20 +36,39 @@ include make.mk
+ ##
+ 
+ 
+-all: src examples
++ifeq ($(DEF_SOLVER), SOLVER_MUMPS)
++EXTERNAL = mumps
++else
++EXTERNAL =
++endif
++
++all:  $(EXTERNAL) bin src examples
+ #src_aw testing
+ 
+-src:
+-	@cd $@; ${MAKE} -s 
++ifeq ($(DEF_SOLVER), SOLVER_MUMPS)
++mumps: 
++	@echo $(QPOASESROOT)
++	@cd external/ThirdParty-Mumps; \
++	if [ -d "MUMPS" ]; then \
++	echo "Found MUMPS source code."; \
++	else get.Mumps; ./configure --prefix=$(PWD)/external/mumps_installation; fi; \
++	make && make install
++endif
++
++src: $(EXTERNAL)
++	@cd $@; ${MAKE} -s
++
++bin:
++	mkdir bin
+ 
+ #src_aw:
+-#	@cd $@; ${MAKE} -s 
++#	@cd $@; ${MAKE} -s
+ 
+ examples: src
+ 	@cd $@; ${MAKE} -s
+ 
+ doc:
+-	@cd $@; ${MAKE} -s 
++	@cd $@; ${MAKE} -s
+ 
+ testing: src
+ 	@cd testing/cpp; ${MAKE} -s
+@@ -58,9 +77,14 @@ test: testing
+ 	@cd testing/cpp; ${MAKE} -s runTests
+ 
+ debugging:
+-	@cd $@; ${MAKE} -s 
++	@cd $@; ${MAKE} -s
+ 
+ clean:
++ifeq ($(DEF_SOLVER), SOLVER_MUMPS)
++	@echo Cleaning up \(mumps\)
++	@cd external/ThirdParty-Mumps && ${MAKE} -s clean
++	@cd external && ${RM} -rf mumps_installation
++endif
+ 	@cd src               && ${MAKE} -s clean
+ 	@cd examples          && ${MAKE} -s clean
+ 	@cd bin               && ${RM} -f *.* *{EXE}
+diff --git a/README b/README
+index ab62901..cafbbc2 100644
+--- a/README
++++ b/README
+@@ -52,7 +52,7 @@ GETTING STARTED
+ 3. The whole software package can be obtained from 
+ 
+        http://www.qpOASES.org/ or
+-	   https://projects.coin-or.org/qpOASES/
++       https://github.com/coin-or/qpOASES/
+ 
+    On this webpage you will also find further support such as a list of 
+    questions posed by other users.
+diff --git a/examples/qrecipe.cpp b/examples/qrecipe.cpp
+index f4df476..9327ee1 100644
+--- a/examples/qrecipe.cpp
++++ b/examples/qrecipe.cpp
+@@ -52,8 +52,8 @@ int main( )
+ 	real_t *y2 = new real_t[271];
+ 
+ 	/* create sparse matrices */
+-	SymSparseMat *H = new SymSparseMat(180, 180, H_ir, H_jc, H_val);
+-	SparseMatrix *A = new SparseMatrix(91, 180, A_ir, A_jc, A_val);
++	SymSparseMat *H = new SymSparseMat(180, 180, H_ri, H_cp, H_val);
++	SparseMatrix *A = new SparseMatrix(91, 180, A_ri, A_cp, A_val);
+ 
+ 	H->createDiagInfo();
+ 
+diff --git a/examples/qrecipeSchur.cpp b/examples/qrecipeSchur.cpp
+index 5345c9e..d63b29c 100644
+--- a/examples/qrecipeSchur.cpp
++++ b/examples/qrecipeSchur.cpp
+@@ -34,12 +34,11 @@
+  */
+ 
+ 
+-
+ #include <qpOASES.hpp>
+-
+ #include "qrecipe_data.hpp"
+-
+-
++// #include "generate_sparse_qp/qp_data.hpp"
++// #include "generate_sparse_qp/simple_qp_data.hpp"
++// #include "generate_sparse_qp/trivial_qp_data.hpp"
+ 
+ int main( )
+ {
+@@ -48,28 +47,31 @@ int main( )
+ 	long i;
+ 	int_t nWSR;
+ 	real_t errP1, errP2, errP3, errD1, errD2, errD3, tic, toc;
+-	real_t *x1 = new real_t[180];
+-	real_t *y1 = new real_t[271];
+-	real_t *x2 = new real_t[180];
+-	real_t *y2 = new real_t[271];
+-	real_t *x3 = new real_t[180];
+-	real_t *y3 = new real_t[271];
++	real_t *x1 = new real_t[NV];
++	real_t *y1 = new real_t[NV+NC];
++	real_t *x2 = new real_t[NV];
++	real_t *y2 = new real_t[NV+NC];
++	real_t *x3 = new real_t[NV];
++	real_t *y3 = new real_t[NV+NC];
+ 
+ 	/* create sparse matrices */
+-	SymSparseMat *H = new SymSparseMat(180, 180, H_ir, H_jc, H_val);
+-	SparseMatrix *A = new SparseMatrix(91, 180, A_ir, A_jc, A_val);
++	SymSparseMat *H = new SymSparseMat(NV, NV, H_ri, H_cp, H_val);
++	SparseMatrix *A = new SparseMatrix(NC, NV, A_ri, A_cp, A_val);
+ 
+ 	H->createDiagInfo();
+ 
+ 	real_t* H_full = H->full();
++    for (int i = 0; i < NV; i++)
++        for (int j = 0; j < NV; j++)
++            printf("H[%i,%i] = %f\n", i, j, H_full[i*NV+j]);
+ 	real_t* A_full = A->full();
+ 
+-	SymDenseMat *Hd = new SymDenseMat(180,180,180,H_full);
+-	DenseMatrix *Ad = new DenseMatrix(91,180,180,A_full);
++	SymDenseMat *Hd = new SymDenseMat(NV, NV, NV, H_full);
++	DenseMatrix *Ad = new DenseMatrix(NC, NV, NV, A_full);
+ 
+ 	/* solve with dense matrices */
+ 	nWSR = 1000;
+-	QProblem qrecipeD(180, 91);
++	QProblem qrecipeD(NV, NC);
+ 	tic = getCPUtime();
+ 	qrecipeD.init(Hd, g, Ad, lb, ub, lbA, ubA, nWSR, 0);
+ 	toc = getCPUtime();
+@@ -80,7 +82,7 @@ int main( )
+ 
+ 	/* solve with sparse matrices (nullspace factorization) */
+ 	nWSR = 1000;
+-	QProblem qrecipeS(180, 91);
++	QProblem qrecipeS(NV, NC);
+ 	tic = getCPUtime();
+ 	qrecipeS.init(H, g, A, lb, ub, lbA, ubA, nWSR, 0);
+ 	toc = getCPUtime();
+@@ -91,27 +93,30 @@ int main( )
+ 
+ 	/* solve with sparse matrices (Schur complement) */
+ 	nWSR = 1000;
+-	SQProblemSchur qrecipeSchur(180, 91);
++	SQProblemSchur qrecipeSchur(NV, NC);
+ 	tic = getCPUtime();
+ 	qrecipeSchur.init(H, g, A, lb, ub, lbA, ubA, nWSR, 0);
+ 	toc = getCPUtime();
+ 	qrecipeSchur.getPrimalSolution(x3);
+ 	qrecipeSchur.getDualSolution(y3);
+ 
+-	fprintf(stdFile, "Solved sparse problem (Schur complement approach) in %d iterations, %.3f seconds.\n", (int)nWSR, toc-tic);
++    fprintf(stdFile, "Solved sparse problem (Schur complement approach) in %d iterations, %.3f seconds.\n", (int)nWSR, toc-tic);
+ 
+ 	/* check distance of solutions */
+ 	errP1 = 0.0;
+ 	errP2 = 0.0;
+ 	errP3 = 0.0;
+ 	#ifndef SOLVER_NONE
+-	for (i = 0; i < 180; i++)
++	for (i = 0; i < NV; i++)
++    {
++        fprintf(stdFile, "x3[%i]=%f\n", i, x3[i]);
+ 		if (getAbs(x1[i] - x2[i]) > errP1)
+ 			errP1 = getAbs(x1[i] - x2[i]);
+-	for (i = 0; i < 180; i++)
++    }
++	for (i = 0; i < NV; i++)
+ 		if (getAbs(x1[i] - x3[i]) > errP2)
+ 			errP2 = getAbs(x1[i] - x3[i]);
+-	for (i = 0; i < 180; i++)
++	for (i = 0; i < NV; i++)
+ 		if (getAbs(x2[i] - x3[i]) > errP3)
+ 			errP3 = getAbs(x2[i] - x3[i]);
+ 	#endif /* SOLVER_NONE */
+@@ -122,14 +127,14 @@ int main( )
+ 	errD1 = 0.0;
+ 	errD2 = 0.0;
+ 	errD3 = 0.0;
+-	for (i = 0; i < 271; i++)
++	for (i = 0; i < NV+NC; i++)
+ 		if (getAbs(y1[i] - y2[i]) > errD1)
+ 			errD1 = getAbs(y1[i] - y2[i]);
+ 	#ifndef SOLVER_NONE
+-	for (i = 0; i < 271; i++)
++	for (i = 0; i < NV+NC; i++)
+ 		if (getAbs(y1[i] - y3[i]) > errD2)
+ 			errD2 = getAbs(y1[i] - y3[i]);
+-	for (i = 0; i < 271; i++)
++	for (i = 0; i < NV+NC; i++)
+ 		if (getAbs(y2[i] - y3[i]) > errD3)
+ 			errD3 = getAbs(y2[i] - y3[i]);
+ 	#endif /* SOLVER_NONE */
+diff --git a/examples/qrecipe_data.hpp b/examples/qrecipe_data.hpp
+index ffc6246..21a7aaf 100644
+--- a/examples/qrecipe_data.hpp
++++ b/examples/qrecipe_data.hpp
+@@ -35,10 +35,13 @@
+ USING_NAMESPACE_QPOASES
+ 
+ 
++#define NV 180
++#define NC 91
++
+ 
+ const real_t Inf = INFTY;
+ 
+-sparse_int_t H_jc[] = { 0,  4,  8, 12, 16, 20, 20, 20, 20, 20, 20,
++sparse_int_t H_cp[] = { 0,  4,  8, 12, 16, 20, 20, 20, 20, 20, 20,
+ 	                   24, 28, 32, 36, 40, 40, 40, 40, 40, 40,
+ 					   44, 48, 52, 56, 60, 60, 60, 60, 60, 60, 60, 60, 60, 60,
+ 					   64, 68, 72, 76, 80, 80, 80, 80, 80, 80,
+@@ -57,7 +60,7 @@ sparse_int_t H_jc[] = { 0,  4,  8, 12, 16, 20, 20, 20, 20, 20, 20,
+ 					   80, 80, 80, 80, 80, 80, 80, 80, 80, 80,
+ 					   80, 80, 80, 80, 80, 80 };
+ 
+-sparse_int_t H_ir[] = {
++sparse_int_t H_ri[] = {
+ 	0, 10, 20, 34, 1, 11, 21, 35, 2, 12, 22, 36, 3, 13, 23, 37, 4, 14, 24, 38,
+ 	0, 10, 20, 34, 1, 11, 21, 35, 2, 12, 22, 36, 3, 13, 23, 37, 4, 14, 24, 38,
+ 	0, 10, 20, 34, 1, 11, 21, 35, 2, 12, 22, 36, 3, 13, 23, 37, 4, 14, 24, 38,
+@@ -68,7 +71,7 @@ real_t H_val[] = {10, 1, 1, 1, 10, 1, 1, 1, 10, 1, 1, 1, 10, 1, 1, 1, 10, 1, 1,
+ 	10, 1, 1, 1, 10, 1, 1, 1, 10, 1, 1, 1, 10, 1, 1, 1, 10, 1, 1, 1, 1, 10, 1,
+ 	1, 1, 10, 1, 1, 1, 10, 1, 1, 1, 10, 1, 1, 1, 10};
+ 
+-sparse_int_t A_jc[] = {
++sparse_int_t A_cp[] = {
+ 	  0,  10,  20,  30,  40,  50,  60,  70,  80,  90, 100, 110, 120,
+ 	130, 140, 150, 160, 170, 180, 190, 200, 210, 220, 230, 240, 250, 260, 270,
+ 	280, 290, 300, 301, 302, 303, 304, 305, 306, 307, 308, 309, 310, 311, 312,
+@@ -83,7 +86,7 @@ sparse_int_t A_jc[] = {
+ 	610, 611, 612, 613, 614, 615, 616, 617, 618, 628, 638, 648, 650, 653, 655,
+ 	658, 660, 663};
+ 
+-sparse_int_t A_ir[] = {0, 14, 35, 36, 71, 72, 85, 86, 87, 88, 1, 14, 35, 36, 71, 72, 85,
++sparse_int_t A_ri[] = {0, 14, 35, 36, 71, 72, 85, 86, 87, 88, 1, 14, 35, 36, 71, 72, 85,
+ 	86, 87, 88, 2, 14, 35, 36, 71, 72, 85, 86, 87, 88, 3, 14, 35, 36, 71, 72,
+ 	85, 86, 87, 88, 4, 14, 35, 36, 71, 72, 85, 86, 87, 88, 5, 14, 35, 36, 71,
+ 	72, 85, 86, 87, 88, 6, 14, 35, 36, 71, 72, 85, 86, 87, 88, 7, 14, 35, 36,
+diff --git a/include/qpOASES/LapackBlasReplacement.hpp b/include/qpOASES/LapackBlasReplacement.hpp
+index 47b3a05..2c34c58 100644
+--- a/include/qpOASES/LapackBlasReplacement.hpp
++++ b/include/qpOASES/LapackBlasReplacement.hpp
+@@ -1,128 +1,128 @@
+-/*
+- *	This file is part of qpOASES.
+- *
+- *	qpOASES -- An Implementation of the Online Active Set Strategy.
+- *	Copyright (C) 2007-2017 by Hans Joachim Ferreau, Andreas Potschka,
+- *	Christian Kirches et al. All rights reserved.
+- *
+- *	qpOASES is free software; you can redistribute it and/or
+- *	modify it under the terms of the GNU Lesser General Public
+- *	License as published by the Free Software Foundation; either
+- *	version 2.1 of the License, or (at your option) any later version.
+- *
+- *	qpOASES is distributed in the hope that it will be useful,
+- *	but WITHOUT ANY WARRANTY; without even the implied warranty of
+- *	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+- *	See the GNU Lesser General Public License for more details.
+- *
+- *	You should have received a copy of the GNU Lesser General Public
+- *	License along with qpOASES; if not, write to the Free Software
+- *	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+- *
+- */
+-
+-
+-/**
+- *	\file include/qpOASES/LapackBlasReplacement.hpp
+- *	\author Andreas Potschka, Hans Joachim Ferreau, Christian Kirches
+- *	\version 3.2
+- *	\date 2009-2017
+- *
+- *  Declarations for external LAPACK/BLAS functions.
+- */
+-
+-
+-
+-#ifndef QPOASES_LAPACKBLASREPLACEMENT_HPP
+-#define QPOASES_LAPACKBLASREPLACEMENT_HPP
+-
+-
+-#ifdef __AVOID_LA_NAMING_CONFLICTS__
+-
+-	#define SGEMM  qpOASES_sgemm
+-	#define DGEMM  qpOASES_gemm
+-	#define SPOTRF qpOASES_spotrf
+-	#define DPOTRF qpOASES_dpotrf
+-	#define STRTRS qpOASES_strtrs
+-	#define DTRTRS qpOASES_dtrtrs
+-	#define STRCON qpOASES_strcon
+-	#define DTRCON qpOASES_dtrcon
+-
+-#else
+-
+-	#define SGEMM  sgemm_
+-	#define DGEMM  dgemm_
+-	#define SPOTRF spotrf_
+-	#define DPOTRF dpotrf_
+-	#define STRTRS strtrs_
+-	#define DTRTRS dtrtrs_
+-	#define STRCON strcon_
+-	#define DTRCON dtrcon_
+-
+-#endif
+-
+-
+-#ifdef __USE_SINGLE_PRECISION__
+-
+-	/** Macro for calling level 3 BLAS operation in single precision. */
+-	#define GEMM  SGEMM
+-	/** Macro for calling level 3 BLAS operation in single precision. */
+-	#define POTRF SPOTRF
+-
+-	/** Macro for calling level 3 BLAS operation in single precision. */
+-	#define TRTRS STRTRS
+-	/** Macro for calling level 3 BLAS operation in single precision. */
+-	#define TRCON strcon_
+-
+-#else
+-
+-	/** Macro for calling level 3 BLAS operation in double precision. */
+-	#define GEMM  DGEMM
+-	/** Macro for calling level 3 BLAS operation in double precision. */
+-	#define POTRF DPOTRF
+-
+-	/** Macro for calling level 3 BLAS operation in double precision. */
+-	#define TRTRS DTRTRS
+-	/** Macro for calling level 3 BLAS operation in double precision. */
+-	#define TRCON DTRCON
+-
+-#endif /* __USE_SINGLE_PRECISION__ */
+-
+-
+-extern "C"
+-{
+-	/** Performs one of the matrix-matrix operation in double precision. */
+-	void DGEMM(		const char*, const char*, const la_uint_t*, const la_uint_t*, const la_uint_t*,
+-					const double*, const double*, const la_uint_t*, const double*, const la_uint_t*,
+-					const double*, double*, const la_uint_t* );
+-	/** Performs one of the matrix-matrix operation in single precision. */
+-	void SGEMM(		const char*, const char*, const la_uint_t*, const la_uint_t*, const la_uint_t*,
+-					const float*, const float*, const la_uint_t*, const float*, const la_uint_t*,
+-					const float*, float*, const la_uint_t* );
+-
+-	/** Calculates the Cholesky factorization of a real symmetric positive definite matrix in double precision. */
+-	void DPOTRF(	const char*, const la_uint_t*, double*, const la_uint_t*, la_int_t* );
+-	/** Calculates the Cholesky factorization of a real symmetric positive definite matrix in single precision. */
+-	void SPOTRF(	const char*, const la_uint_t*, float*, const la_uint_t*, la_int_t* );
+-
+-	/** Solves a triangular system (double precision) */
+-	void DTRTRS(	const char* UPLO, const char* TRANS, const char* DIAG, const la_uint_t* N, const la_uint_t* NRHS,
+-					double* A, const la_uint_t* LDA, double* B, const la_uint_t* LDB, la_int_t* INFO );
+-	/** Solves a triangular system (single precision) */
+-	void STRTRS(	const char* UPLO, const char* TRANS, const char* DIAG, const la_uint_t* N, const la_uint_t* NRHS,
+-					float* A, const la_uint_t* LDA, float* B, const la_uint_t* LDB, la_int_t* INFO );
+-
+-	/** Estimate the reciprocal of the condition number of a triangular matrix in double precision */
+-	void DTRCON(	const char* NORM, const char* UPLO, const char* DIAG, const la_uint_t* N, double* A, const la_uint_t* LDA,
+-					double* RCOND, double* WORK, const la_uint_t* IWORK, la_int_t* INFO );
+-	/** Estimate the reciprocal of the condition number of a triangular matrix in single precision */
+-	void STRCON(	const char* NORM, const char* UPLO, const char* DIAG, const la_uint_t* N, float* A, const la_uint_t* LDA,
+-					float* RCOND, float* WORK, const la_uint_t* IWORK, la_int_t* INFO );
+-}
+-
+-#endif	/* QPOASES_LAPACKBLASREPLACEMENT_HPP */
+-
+-
+-/*
+- *	end of file
+- */
++/*
++ *	This file is part of qpOASES.
++ *
++ *	qpOASES -- An Implementation of the Online Active Set Strategy.
++ *	Copyright (C) 2007-2017 by Hans Joachim Ferreau, Andreas Potschka,
++ *	Christian Kirches et al. All rights reserved.
++ *
++ *	qpOASES is free software; you can redistribute it and/or
++ *	modify it under the terms of the GNU Lesser General Public
++ *	License as published by the Free Software Foundation; either
++ *	version 2.1 of the License, or (at your option) any later version.
++ *
++ *	qpOASES is distributed in the hope that it will be useful,
++ *	but WITHOUT ANY WARRANTY; without even the implied warranty of
++ *	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
++ *	See the GNU Lesser General Public License for more details.
++ *
++ *	You should have received a copy of the GNU Lesser General Public
++ *	License along with qpOASES; if not, write to the Free Software
++ *	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
++ *
++ */
++
++
++/**
++ *	\file include/qpOASES/LapackBlasReplacement.hpp
++ *	\author Andreas Potschka, Hans Joachim Ferreau, Christian Kirches
++ *	\version 3.2
++ *	\date 2009-2017
++ *
++ *  Declarations for external LAPACK/BLAS functions.
++ */
++
++
++
++#ifndef QPOASES_LAPACKBLASREPLACEMENT_HPP
++#define QPOASES_LAPACKBLASREPLACEMENT_HPP
++
++
++#ifdef __AVOID_LA_NAMING_CONFLICTS__
++
++	#define SGEMM  qpOASES_sgemm
++	#define DGEMM  qpOASES_gemm
++	#define SPOTRF qpOASES_spotrf
++	#define DPOTRF qpOASES_dpotrf
++	#define STRTRS qpOASES_strtrs
++	#define DTRTRS qpOASES_dtrtrs
++	#define STRCON qpOASES_strcon
++	#define DTRCON qpOASES_dtrcon
++
++#else
++
++	#define SGEMM  sgemm_
++	#define DGEMM  dgemm_
++	#define SPOTRF spotrf_
++	#define DPOTRF dpotrf_
++	#define STRTRS strtrs_
++	#define DTRTRS dtrtrs_
++	#define STRCON strcon_
++	#define DTRCON dtrcon_
++
++#endif
++
++
++#ifdef __USE_SINGLE_PRECISION__
++
++	/** Macro for calling level 3 BLAS operation in single precision. */
++	#define GEMM  SGEMM
++	/** Macro for calling level 3 BLAS operation in single precision. */
++	#define POTRF SPOTRF
++
++	/** Macro for calling level 3 BLAS operation in single precision. */
++	#define TRTRS STRTRS
++	/** Macro for calling level 3 BLAS operation in single precision. */
++	#define TRCON strcon_
++
++#else
++
++	/** Macro for calling level 3 BLAS operation in double precision. */
++	#define GEMM  DGEMM
++	/** Macro for calling level 3 BLAS operation in double precision. */
++	#define POTRF DPOTRF
++
++	/** Macro for calling level 3 BLAS operation in double precision. */
++	#define TRTRS DTRTRS
++	/** Macro for calling level 3 BLAS operation in double precision. */
++	#define TRCON DTRCON
++
++#endif /* __USE_SINGLE_PRECISION__ */
++
++
++extern "C"
++{
++	/** Performs one of the matrix-matrix operation in double precision. */
++	void DGEMM(		const char*, const char*, const la_uint_t*, const la_uint_t*, const la_uint_t*,
++					const double*, const double*, const la_uint_t*, const double*, const la_uint_t*,
++					const double*, double*, const la_uint_t* );
++	/** Performs one of the matrix-matrix operation in single precision. */
++	void SGEMM(		const char*, const char*, const la_uint_t*, const la_uint_t*, const la_uint_t*,
++					const float*, const float*, const la_uint_t*, const float*, const la_uint_t*,
++					const float*, float*, const la_uint_t* );
++
++	/** Calculates the Cholesky factorization of a real symmetric positive definite matrix in double precision. */
++	void DPOTRF(	const char*, const la_uint_t*, double*, const la_uint_t*, la_int_t* );
++	/** Calculates the Cholesky factorization of a real symmetric positive definite matrix in single precision. */
++	void SPOTRF(	const char*, const la_uint_t*, float*, const la_uint_t*, la_int_t* );
++
++	/** Solves a triangular system (double precision) */
++	void DTRTRS(	const char* UPLO, const char* TRANS, const char* DIAG, const la_uint_t* N, const la_uint_t* NRHS,
++					double* A, const la_uint_t* LDA, double* B, const la_uint_t* LDB, la_int_t* INFO );
++	/** Solves a triangular system (single precision) */
++	void STRTRS(	const char* UPLO, const char* TRANS, const char* DIAG, const la_uint_t* N, const la_uint_t* NRHS,
++					float* A, const la_uint_t* LDA, float* B, const la_uint_t* LDB, la_int_t* INFO );
++
++	/** Estimate the reciprocal of the condition number of a triangular matrix in double precision */
++	void DTRCON(	const char* NORM, const char* UPLO, const char* DIAG, const la_uint_t* N, double* A, const la_uint_t* LDA,
++					double* RCOND, double* WORK, const la_uint_t* IWORK, la_int_t* INFO );
++	/** Estimate the reciprocal of the condition number of a triangular matrix in single precision */
++	void STRCON(	const char* NORM, const char* UPLO, const char* DIAG, const la_uint_t* N, float* A, const la_uint_t* LDA,
++					float* RCOND, float* WORK, const la_uint_t* IWORK, la_int_t* INFO );
++}
++
++#endif	/* QPOASES_LAPACKBLASREPLACEMENT_HPP */
++
++
++/*
++ *	end of file
++ */
+diff --git a/include/qpOASES/SQProblemSchur.hpp b/include/qpOASES/SQProblemSchur.hpp
+index 8408ef7..309e903 100644
+--- a/include/qpOASES/SQProblemSchur.hpp
++++ b/include/qpOASES/SQProblemSchur.hpp
+@@ -41,7 +41,6 @@
+ 
+ #include <qpOASES/SQProblem.hpp>
+ #include <qpOASES/SparseSolver.hpp>
+-#include <qpOASES/LapackBlasReplacement.hpp>
+ 
+ 
+ BEGIN_NAMESPACE_QPOASES
+diff --git a/include/qpOASES/SparseSolver.hpp b/include/qpOASES/SparseSolver.hpp
+index 4d07490..689f425 100644
+--- a/include/qpOASES/SparseSolver.hpp
++++ b/include/qpOASES/SparseSolver.hpp
+@@ -34,6 +34,8 @@
+ 
+ #ifndef QPOASES_SPARSESOLVER_HPP
+ #define QPOASES_SPARSESOLVER_HPP
++#include <limits>
++#include <sstream>
+ 
+ #include <qpOASES/Utils.hpp>
+ 
+@@ -349,6 +351,181 @@ class Ma57SparseSolver: public SparseSolver
+ #endif /* SOLVER_MA57 */
+ 
+ 
++#ifdef SOLVER_MUMPS
++
++/**
++ *	\brief Implementation of the linear solver interface using MUMPS.
++ *
++ *	\author Andrea Zanelli
++ *	\version 3.2
++ *	\date 2022
++ */
++class MumpsSparseSolver: public SparseSolver
++{
++	/*
++	 *	PUBLIC MEMBER FUNCTIONS
++	 */
++	public:
++		/** Default constructor. */
++		MumpsSparseSolver( );
++
++		/** Copy constructor (deep copy). */
++		MumpsSparseSolver(	const MumpsSparseSolver& rhs		/**< Rhs object. */
++							);
++
++		/** Destructor. */
++		virtual ~MumpsSparseSolver( );
++
++		/** Assignment operator (deep copy). */
++		virtual MumpsSparseSolver& operator=(	const SparseSolver& rhs	/**< Rhs object. */
++												);
++
++		/** Set new matrix data.  The matrix is to be provided
++			in the Harwell-Boeing format.  Only the lower
++			triangular part should be set. */
++		virtual returnValue setMatrixData( int_t dim,					/**< Dimension of the linear system. */
++										   int_t numNonzeros,			/**< Number of nonzeros in the matrix. */
++										   const int_t* const airn,		/**< Row indices for each matrix entry. */
++										   const int_t* const acjn,		/**< Column indices for each matrix entry. */
++										   const real_t* const avals	/**< Values for each matrix entry. */
++										   );
++
++		/** Compute factorization of current matrix.  This method must be called before solve.*/
++		virtual returnValue factorize( );
++
++		/** Solve linear system with most recently set matrix data. */
++		virtual returnValue solve(	int_t dim,					/**< Dimension of the linear system. */
++									const real_t* const rhs,	/**< Values for the right hand side. */
++									real_t* const sol			/**< Solution of the linear system. */
++									);
++
++		/** Clears all data structures. */
++		virtual returnValue reset( );
++
++		/** Return the number of negative eigenvalues. */
++		virtual int_t getNegativeEigenvalues( );
++
++		/** Return the rank after a factorization */
++		virtual int_t getRank( );
++
++		/** Returns the zero pivots in case the matrix is rank deficient */
++		virtual returnValue getZeroPivots(  int_t* &zeroPivots  /**< ... */
++											);
++	/*
++	 *	PROTECTED MEMBER FUNCTIONS
++	 */
++	protected:
++		/** Frees all allocated memory.
++		 *  \return SUCCESSFUL_RETURN */
++		returnValue clear( );
++
++		/** Copies all members from given rhs object.
++		 *  \return SUCCESSFUL_RETURN */
++		returnValue copy(	const MumpsSparseSolver& rhs	/**< Rhs object. */
++							);
++
++	/*
++	 *	PRIVATE MEMBER FUNCTIONS
++	 */
++	private:
++	/*
++	 *	PRIVATE MEMBER VARIABLES
++	 */
++	private:
++
++        
++        void* mumps_ptr_;           /** Primary MUMPS data structure */
++
++		int dim;				    /**< Dimension of the current linear system. */
++
++		int numNonzeros;		    /**< Number of nonzeros in the current linear system. */
++
++		double* a_mumps;		    /**< matrix for MUMPS (A in MUMPS) */
++
++		int* irn_mumps;		    /**< Row entries of matrix (IRN in MUMPS) */
++
++		int* jcn_mumps;		    /**< Column entries of matrix (JCN in MUMPS) */
++
++		bool have_factorization;    /**< flag indicating whether factorization for current matrix has already been computed */
++
++		int negevals_;		    /**< number of negative eigenvalues */
++
++        int mumps_pivot_order_;  /* pivot order*/
++
++        bool initialized_;
++        /** Flag indicating if the matrix has to be refactorized because
++        *  the pivot tolerance has been changed.
++        */
++        bool pivtol_changed_;
++        /** Flag that is true if we just requested the values of the
++        *  matrix again (SYMSOLVER_CALL_AGAIN) and have to factorize
++        *  again.
++        */
++        bool refactorize_;
++        ///@}
++
++        /** @name Solver specific data/options */
++        ///@{
++        /** Pivot tolerance */
++        double pivtol_;
++
++        /** Maximal pivot tolerance */
++        double pivtolmax_;
++
++        /** Percent increase in memory */
++        int mem_percent_;
++
++        /** Permutation and scaling method in MUMPS */
++        int mumps_permuting_scaling_;
++
++        /** Scaling in MUMPS */
++        int mumps_scaling_;
++
++        /** Threshold in MUMPS to state that a constraint is linearly dependent */
++        double mumps_dep_tol_;
++
++        /** Flag indicating whether the TNLP with identical structure has
++        *  already been solved before.
++        */
++        bool warm_start_same_structure_;
++        ///@}
++
++        /** Flag indicating if symbolic factorization has already been called */
++        bool have_symbolic_factorization_;
++};
++
++template<typename T>
++inline void ComputeMemIncrease(
++   T&          len,          ///< current length on input, new length on output
++   double      recommended,  ///< recommended size
++   T           min,          ///< minimal size that should ensured
++   const char* context       ///< context from where this function is called - used to setup message for exception
++)
++{
++   if( recommended >= std::numeric_limits<T>::max() )
++   {
++      // increase len to the maximum possible, if that is still an increase
++      if( len < std::numeric_limits<T>::max() )
++      {
++         len = std::numeric_limits<T>::max();
++      }
++      else
++      {
++         std::stringstream what;
++         what << "Cannot allocate more than " << std::numeric_limits<T>::max()*sizeof(T) << " bytes for " << context << " due to limitation on integer type";
++         throw std::overflow_error(what.str());
++      }
++   }
++   else
++   {
++      len = std::max(min, (T) recommended);
++   }
++}
++
++#endif /* SOLVER_MUMPS */
++
++
++
+ #ifdef SOLVER_NONE
+ 
+ /**
+diff --git a/include/qpOASES/Types.hpp b/include/qpOASES/Types.hpp
+index d47e4d5..9d52cee 100644
+--- a/include/qpOASES/Types.hpp
++++ b/include/qpOASES/Types.hpp
+@@ -147,8 +147,8 @@
+ #define TT( I,J )  T[(I)*sizeT+(J)]
+ 
+ 
+-/* If neither MA57 nor MA27 are selected, activate the dummy solver */
+-#if !defined(SOLVER_MA27) && !defined(SOLVER_MA57) && !defined(SOLVER_NONE)
++/* If neither MA57 nor MA27 nor MUMPS are selected, activate the dummy solver */
++#if !defined(SOLVER_MA27) && !defined(SOLVER_MA57) && !defined(SOLVER_MUMPS) && !defined(SOLVER_NONE)
+ #define SOLVER_NONE
+ #endif
+ 
+diff --git a/interfaces/c/Makefile b/interfaces/c/Makefile
+index 1f4d188..f7774a1 100644
+--- a/interfaces/c/Makefile
++++ b/interfaces/c/Makefile
+@@ -57,6 +57,7 @@ QPOASES_WRAPPER_OBJECTS = \
+ 
+ QPOASES_DEPENDS = \
+ 	${IDIR}/qpOASES.hpp \
++	${IDIR}/qpOASES/LapackBlasReplacement.hpp \
+ 	${IDIR}/qpOASES/SQProblem.hpp \
+ 	${IDIR}/qpOASES/QProblem.hpp \
+ 	${IDIR}/qpOASES/Flipper.hpp \
+diff --git a/interfaces/matlab/make.m b/interfaces/matlab/make.m
+index 0ff4274..37c02c2 100644
+--- a/interfaces/matlab/make.m
++++ b/interfaces/matlab/make.m
+@@ -65,7 +65,7 @@ function [] = make( varargin )
+     %DEBUGFLAGS = ' -v -g CXXDEBUGFLAGS=''$CXXDEBUGFLAGS -Wall -pedantic -Wshadow'' ';
+ 
+     IFLAGS = [ '-I. -I',QPOASESPATH,'include',' -I',QPOASESPATH,'src',' ' ];
+-    CPPFLAGS = [ IFLAGS, DEBUGFLAGS, '-largeArrayDims -D__cpluplus -D__MATLAB__ -D__SINGLE_OBJECT__',' ' ];
++    CPPFLAGS = [ IFLAGS, DEBUGFLAGS, '-largeArrayDims -D__cpluplus -D__MATLAB__ -D__AVOID_LA_NAMING_CONFLICTS__ -D__SINGLE_OBJECT__',' ' ];
+     defaultFlags = '-O -D__NO_COPYRIGHT__ '; %% -D__SUPPRESSANYOUTPUT__
+ 
+     if ( ispc() == 0 )
+diff --git a/make_linux.mk b/make_linux.mk
+index a15b52e..4820cff 100644
+--- a/make_linux.mk
++++ b/make_linux.mk
+@@ -36,11 +36,12 @@
+ IDIR =   ${TOP}/include
+ SRCDIR = ${TOP}/src
+ BINDIR = ${TOP}/bin
++MKFILE_PATH := $(abspath $(lastword $(MAKEFILE_LIST)))
++MKFILE_DIR := $(dir $(MKFILE_PATH))
++EXT_IDIR = 
+ 
+ # Matlab include directory (ADAPT TO YOUR LOCAL SETTINGS!)
+ #MATLAB_IDIR   = ${HOME}/Programs/matlab/extern/include/
+-MATLAB_IDIR   = /usr/local/matlab/extern/include/
+-MATLAB_LIBDIR = /usr/local/matlab/bin/glnxa64/
+ 
+ # system or replacement BLAS/LAPACK
+ REPLACE_LINALG = 1
+@@ -49,8 +50,6 @@ ifeq ($(REPLACE_LINALG), 1)
+ 	LIB_BLAS =   ${SRCDIR}/BLASReplacement.o
+ 	LIB_LAPACK = ${SRCDIR}/LAPACKReplacement.o
+ else
+-	LIB_BLAS =   /usr/lib/libblas.so.3gf
+-	LIB_LAPACK = /usr/lib/liblapack.so.3gf
+ #	LIB_BLAS = ${MATLAB_LIBDIR}/libmwblas.so
+ #	LIB_LAPACK = ${MATLAB_LIBDIR}/libmwlapack.so
+ endif
+@@ -58,7 +57,8 @@ endif
+ # choice of sparse solver: NONE, MA27, or MA57
+ # If choice is not 'NONE', BLAS and LAPACK replacements must not be used
+ USE_SOLVER = NONE
+-#USE_SOLVER = MA57
++# USE_SOLVER = MUMPS
++
+ 
+ ifeq ($(USE_SOLVER), MA57)
+ 	LIB_SOLVER = ${MATLAB_LIBDIR}/libmwma57.so
+@@ -68,6 +68,11 @@ else ifeq ($(USE_SOLVER), MA27)
+ 	LIB_SOLVER = /usr/local/lib/libhsl_ma27.a
+ 	DEF_SOLVER = SOLVER_MA27
+ 	LINKHSL =
++else ifeq ($(USE_SOLVER), MUMPS)
++	LIB_SOLVER = $(MKFILE_DIR)external/mumps_installation/lib/libcoinmumps.so
++	DEF_SOLVER = SOLVER_MUMPS
++	LINKHSL =
++	EXT_IDIR += -I$(MKFILE_DIR)external/mumps_installation/include/coin-or/mumps/
+ else
+ 	LIB_SOLVER =
+ 	DEF_SOLVER = SOLVER_NONE
+@@ -106,11 +111,12 @@ else
+ endif
+ 
+ 
+-CPPFLAGS = -Wall -pedantic -Wshadow -Wfloat-equal -O3 -Wconversion -Wsign-conversion -fPIC -DLINUX -D__USE_LONG_INTEGERS__ -D__USE_LONG_FINTS__ -D${DEF_SOLVER} -D__NO_COPYRIGHT__
++# CPPFLAGS = -Wall $(EXT_IDIR) -pedantic -Wshadow -Wfloat-equal -O3 -Wconversion -Wsign-conversion -fPIC -DLINUX -D__USE_LONG_INTEGERS__ -D__USE_LONG_FINTS__ -D${DEF_SOLVER} -D__NO_COPYRIGHT__
++CPPFLAGS = -Wall $(EXT_IDIR) -pedantic -Wshadow -Wfloat-equal -O3 -Wconversion -Wsign-conversion -fPIC -DLINUX  -D${DEF_SOLVER} -D__NO_COPYRIGHT__
+ #          -g -D__DEBUG__ -D__NO_COPYRIGHT__ -D__SUPPRESSANYOUTPUT__ -D__USE_SINGLE_PRECISION__
+ 
+ # libraries to link against when building qpOASES .so files
+-LINK_LIBRARIES = ${LIB_LAPACK} ${LIB_BLAS} -lm ${LIB_SOLVER}
++LINK_LIBRARIES = ${LIB_LAPACK} ${LIB_BLAS} -lm ${LIB_SOLVER} -ldl
+ LINK_LIBRARIES_WRAPPER = -lm ${LIB_SOLVER} -lstdc++
+ 
+ # how to link against the qpOASES shared library
+diff --git a/src/BLASReplacement.cpp b/src/BLASReplacement.cpp
+index e6a7d87..b32ee98 100644
+--- a/src/BLASReplacement.cpp
++++ b/src/BLASReplacement.cpp
+@@ -146,7 +146,7 @@ extern "C" void SGEMM(	const char* TRANSA, const char* TRANSB,
+ 						C[j+(*LDC)*k] += *ALPHA * A[i+(*LDA)*j] * B[i+(*LDB)*k];
+ }
+ 
+-
+-/*
+- *	end of file
+- */
++
++/*
++ *	end of file
++ */
+diff --git a/src/LAPACKReplacement.cpp b/src/LAPACKReplacement.cpp
+index 78f62cb..16f474e 100644
+--- a/src/LAPACKReplacement.cpp
++++ b/src/LAPACKReplacement.cpp
+@@ -153,7 +153,7 @@ extern "C" void STRCON(	const char* NORM, const char* UPLO, const char* DIAG,
+ 	INFO[0] = ((la_int_t)0xDEADBEEF); /* Dummy. If SQProblemSchur is to be used, system LAPACK must be used */
+ }
+ 
+-
+-/*
+- *	end of file
+- */
++
++/*
++ *	end of file
++ */
+diff --git a/src/Matrices.cpp b/src/Matrices.cpp
+index d41881f..d16e2a1 100644
+--- a/src/Matrices.cpp
++++ b/src/Matrices.cpp
+@@ -687,7 +687,7 @@ SparseMatrix::SparseMatrix(	int_t nr, int_t nc, int_t ld, const real_t*  const v
+ 	{
+ 		jc[j] = nnz;
+ 		for (i = 0; i < nRows; i++)
+-			if ( ( isZero( v[i*ld+j],0.0 ) == BT_FALSE ) || ( i == j ) ) /* also include zero diagonal elemets! */
++			if ( ( isZero( v[i*ld+j],0.0 ) == BT_FALSE ) || ( i == j ) ) /* also include zero diagonal elements! */
+ 			{
+ 				ir[nnz] = i;
+ 				val[nnz++] = v[i*ld+j];
+@@ -850,10 +850,8 @@ returnValue SparseMatrix::getRowNorm( real_t* norm, int_t type ) const
+ 			break;
+ 		case 1:
+ 			for ( j=0; j < nCols; ++j ) {
+-				// FIXME please add guarding or fix indent for "for loop" to
+-				//       remove compile warnings
+ 				for (i = jc[j]; i < jc[j+1]; i++);
+-				  norm[ir[i]] += getAbs( val[i] );
++				norm[ir[i]] += getAbs( val[i] );
+ 			}
+ 			break;
+ 		default:
+diff --git a/src/SQProblemSchur.cpp b/src/SQProblemSchur.cpp
+index 61ecc5c..ba3b843 100644
+--- a/src/SQProblemSchur.cpp
++++ b/src/SQProblemSchur.cpp
+@@ -35,6 +35,7 @@
+  */
+ 
+ #include <qpOASES/SQProblemSchur.hpp>
++#include <qpOASES/LapackBlasReplacement.hpp>
+ 
+ 
+ #ifndef __MATLAB__
+@@ -71,8 +72,10 @@ SQProblemSchur::SQProblemSchur( ) : SQProblem( )
+ 	sparseSolver = new Ma57SparseSolver();
+ #elif defined SOLVER_MA27
+ 	sparseSolver = new Ma27SparseSolver();
++#elif defined SOLVER_MUMPS
++	sparseSolver = new MumpsSparseSolver();
+ #elif defined SOLVER_NONE
+-	sparseSolver = new DummySparseSolver();
++    sparseSolver = new DummySparseSolver();
+ #endif
+ 
+ 	nSmax = 0;
+@@ -105,6 +108,8 @@ SQProblemSchur::SQProblemSchur( int_t _nV, int_t _nC, HessianType _hessianType,
+ 	sparseSolver = new Ma57SparseSolver();
+ #elif defined SOLVER_MA27
+ 	sparseSolver = new Ma27SparseSolver();
++#elif defined SOLVER_MUMPS
++	sparseSolver = new MumpsSparseSolver();
+ #elif defined SOLVER_NONE
+ 	sparseSolver = new DummySparseSolver();
+ #endif
+@@ -152,6 +157,8 @@ SQProblemSchur::SQProblemSchur( const SQProblemSchur& rhs ) : SQProblem( rhs )
+ 	sparseSolver = new Ma57SparseSolver();
+ #elif defined SOLVER_MA27
+ 	sparseSolver = new Ma27SparseSolver();
++#elif defined SOLVER_MUMPS
++	sparseSolver = new MumpsSparseSolver();
+ #elif defined SOLVER_NONE
+ 	sparseSolver = new DummySparseSolver();
+ #endif
+@@ -2629,6 +2636,10 @@ returnValue SQProblemSchur::stepCalcBacksolveSchur( int_t nFR, int_t nFX, int_t
+ 	computeMTimes(-1.0, p, 1.0, rhs);
+ 
+ 	retval = sparseSolver->solve(dim, rhs, sol);
++
++    // for (int i = 0; i < dim; i++)
++    //     printf("sol[%i] = %f\n", i, sol[i]);
++
+ 	if (retval != SUCCESSFUL_RETURN)
+ 	{
+ 		MyPrintf( "sparseSolver->solve (second time) failed.\n");
+diff --git a/src/SparseSolver.cpp b/src/SparseSolver.cpp
+index 39b30c0..c3b996a 100644
+--- a/src/SparseSolver.cpp
++++ b/src/SparseSolver.cpp
+@@ -43,6 +43,25 @@ void MyPrintf(const char* pformat, ... );
+ # define MyPrintf mexPrintf
+ #endif
+ 
++#if SOLVER_MUMPS
++
++#define USE_COMM_WORLD -987654
++
++#include "mumps_compat.h"
++
++
++#ifdef USE_MPI_H
++#include "mpi.h"
++#else
++#include "mumps_mpi.h"
++#endif /* USE_MPI_H */
++
++#include "dmumps_c.h"
++#define MUMPS_STRUC_C DMUMPS_STRUC_C
++#define mumps_c dmumps_c
++
++#endif /* SOLVER_MUMPS */
++
+ BEGIN_NAMESPACE_QPOASES
+ 
+ /*****************************************************************************
+@@ -494,15 +513,15 @@ returnValue Ma27SparseSolver::copy( 	const Ma27SparseSolver& rhs
+ 	la_ma27 = rhs.la_ma27;
+ 	if ( rhs.a_ma27 != 0 )
+ 	{
+-	  if (rhs.have_factorization)
+-		{
+-		  a_ma27 = new double[la_ma27];
+-		  memcpy( a_ma27,rhs.a_ma27,la_ma27*sizeof(double) );
++	    if (rhs.have_factorization)
++	    {
++		    a_ma27 = new double[la_ma27];
++		    memcpy( a_ma27,rhs.a_ma27,la_ma27*sizeof(double) );
+ 		}
+-	  else
++	    else
+ 		{
+-		  a_ma27 = new double[numNonzeros];
+-		  memcpy( a_ma27,rhs.a_ma27,numNonzeros*sizeof(double) );
++		    a_ma27 = new double[numNonzeros];
++		    memcpy( a_ma27,rhs.a_ma27,numNonzeros*sizeof(double) );
+ 		}
+ 	}
+ 	else
+@@ -872,18 +891,23 @@ returnValue Ma57SparseSolver::solve(	int_t dim_,
+ 										real_t* const sol
+ 										)
+ {
++    // printf("in solve (MA57)\n");
+ 	/* consistency check */
+ 	if ( dim_ != dim )
+ 		return THROWERROR( RET_INVALID_ARGUMENTS );
+ 
+ 	if ( !have_factorization )
+ 	{
+-	  MyPrintf("Factorization not called before solve in Ma57SparseSolver::solve.\n");
+-	  return THROWERROR( RET_INVALID_ARGUMENTS );
++	    MyPrintf("Factorization not called before solve in Ma57SparseSolver::solve.\n");
++	    return THROWERROR( RET_INVALID_ARGUMENTS );
+ 	}
+ 
+ 	if ( dim == 0 )
++    {
++        printf("dim=0\n");
+ 		return SUCCESSFUL_RETURN;
++    }
++
+ 
+ 	/* Call MA57CD to solve the system */
+ 	fint_t job_ma57 = 1;
+@@ -1070,6 +1094,489 @@ returnValue Ma57SparseSolver::copy( 	const Ma57SparseSolver& rhs
+ #endif /* SOLVER_MA57 */
+ 
+ 
++#ifdef SOLVER_MUMPS
++
++/*****************************************************************************
++ *****************************************************************************
++ *****************************************************************************
++ *  M U M P S S P A R E S E S O L V E R                                        *
++ *****************************************************************************
++ *****************************************************************************
++ *****************************************************************************/
++
++#ifdef USE_MPI_H
++// initialize MPI when library is loaded; finalize MPI when library is unloaded
++__attribute__((constructor))
++static void MPIinit(void)
++{
++    int mpi_initialized;
++    MPI_Initialized(&mpi_initialized);
++    if( !mpi_initialized )
++    {
++        int argc = 1;
++        char** argv = NULL;
++        MPI_Init(&argc, &argv);
++    }
++}
++
++__attribute__((destructor))
++static void MPIfini(void)
++{
++    int mpi_finalized;
++    MPI_Finalize(&mpi_finalized);
++    if(!mpi_finalized)
++        MPI_Finalize();
++}
++#endif /* !USE_MPI_H */
++
++
++/*****************************************************************************
++ *  P U B L I C                                                              *
++ ****************************************************************************/
++
++
++/*
++ *	M u m p s S p a r s e S o l v e r
++ */
++
++MumpsSparseSolver::MumpsSparseSolver( ) : SparseSolver()
++{
++
++	a_mumps = 0;
++	irn_mumps = 0;
++	jcn_mumps = 0;
++	clear( );
++
++    //initialize mumps
++    MUMPS_STRUC_C* mumps_ = static_cast<MUMPS_STRUC_C*>(calloc(1, sizeof(MUMPS_STRUC_C)));
++    mumps_->job = -1; //initialize mumps
++    mumps_->par = 1;  //working host for sequential version
++    mumps_->sym = 2;  //general symmetric matrix
++    mumps_->comm_fortran = USE_COMM_WORLD;
++
++// #ifndef IPOPT_MUMPS_NOMUTEX
++//     const std::lock_guard<std::mutex> lock(mumps_call_mutex);
++// #endif
++
++    mumps_c(mumps_);
++    mumps_->icntl[1] = 0;
++    mumps_->icntl[2] = 0; //QUIETLY!
++    mumps_->icntl[3] = 0;
++
++
++    // these values are just copied from Ipopt: better values might exist
++    mem_percent_ = 1000;
++    mumps_permuting_scaling_ = 7;
++    mumps_pivot_order_ = 7;
++    mumps_scaling_ = 77;
++    mumps_dep_tol_ = 0.0;
++
++    pivtol_ = 0.000001;
++    // pivtol_ = 1.0;
++    // pivtol_ = 0.1;
++    // pivtol_ = 0.0;
++    pivtolmax_ = 0.1; // actually unused atm
++
++    // Reset all private data
++    initialized_ = false;
++    pivtol_changed_ = false;
++    refactorize_ = false;
++    have_symbolic_factorization_ = false;
++    mumps_ptr_ = (void*) mumps_;
++
++}
++
++
++/*
++ *	M u m p s S p a r s e S o l v e r
++ */
++MumpsSparseSolver::MumpsSparseSolver( const MumpsSparseSolver& rhs )
++{
++	copy( rhs );
++}
++
++
++/*
++ *	~ M u m p s S p a r s e S o l v e r
++ */
++MumpsSparseSolver::~MumpsSparseSolver( )
++{
++
++// #ifndef IPOPT_MUMPS_NOMUTEX
++//     const std::lock_guard<std::mutex> lock(mumps_call_mutex);
++// #endif
++
++    MUMPS_STRUC_C* mumps_ = static_cast<MUMPS_STRUC_C*>(mumps_ptr_);
++    mumps_->job = -2; //terminate mumps
++    mumps_c(mumps_);
++    delete[] mumps_->a;
++    free(mumps_);
++}
++
++
++/*
++ *	o p e r a t o r =
++ */
++MumpsSparseSolver& MumpsSparseSolver::operator=( const SparseSolver& rhs )
++{
++	const MumpsSparseSolver* mumps_rhs = dynamic_cast<const MumpsSparseSolver*>(&rhs);
++	if (!mumps_rhs)
++	{
++		fprintf(getGlobalMessageHandler()->getOutputFile(),"Error in MumpsSparseSolver& MumpsSparseSolver::operator=( const SparseSolver& rhs )\n");
++		throw; /* TODO: More elegant exit? */
++	}
++	if ( this != mumps_rhs )
++	{
++		clear( );
++		SparseSolver::operator=( rhs );
++		copy( *mumps_rhs );
++	}
++
++	return *this;
++}
++
++/*
++ *	s e t M a t r i x D a t a
++ */
++returnValue MumpsSparseSolver::setMatrixData(	int_t dim_,
++												int_t numNonzeros_,
++												const int_t* const irn,
++												const int_t* const jcn,
++												const real_t* const avals
++												)
++{
++	reset( );
++	dim = dim_;
++	numNonzeros = numNonzeros_;
++
++	if ( numNonzeros_ > 0 )
++	{
++		a_mumps = new double[numNonzeros_];
++		irn_mumps = new fint_t[numNonzeros_];
++		jcn_mumps = new fint_t[numNonzeros_];
++
++		numNonzeros=0;
++		for (int_t i=0; i<numNonzeros_; ++i)
++			if ( isZero(avals[i]) == BT_FALSE )
++			{
++				a_mumps[numNonzeros] = avals[i];
++				irn_mumps[numNonzeros] = irn[i];
++				jcn_mumps[numNonzeros] = jcn[i];
++				numNonzeros++;
++			}
++	}
++	else
++	{
++		numNonzeros = 0;
++		a_mumps = 0;
++		irn_mumps = 0;
++	    jcn_mumps = 0;
++	}
++
++	return SUCCESSFUL_RETURN;
++}
++
++
++/*
++ *	f a c t o r i z e
++ */
++returnValue MumpsSparseSolver::factorize( )
++{
++	if ( dim == 0 )
++	{
++		have_factorization = true;
++		negevals_ = 0;
++		return SUCCESSFUL_RETURN;
++
++	}
++
++    /// IPOPT-MUMPS
++    MUMPS_STRUC_C* mumps_data = static_cast<MUMPS_STRUC_C*>(mumps_ptr_);
++
++    MUMPS_STRUC_C* mumps_ = static_cast<MUMPS_STRUC_C*>(mumps_ptr_);
++    mumps_data->n = dim;
++    mumps_data->nz = numNonzeros;
++    delete[] mumps_data->a;
++    mumps_data->a = NULL;
++
++    mumps_data->a = new double[numNonzeros];
++    mumps_data->irn = const_cast<int*>(irn_mumps);
++    mumps_data->jcn = const_cast<int*>(jcn_mumps);
++
++    // make sure we do the symbolic factorization before a real
++    // factorization
++    have_symbolic_factorization_ = false;
++
++// #ifndef IPOPT_MUMPS_NOMUTEX
++//     const std::lock_guard<std::mutex> lock(mumps_call_mutex);
++// #endif
++
++    mumps_data->job = 1;      //symbolic ordering pass
++
++    //mumps_data->icntl[1] = 6;
++    //mumps_data->icntl[2] = 6;//QUIETLY!
++    //mumps_data->icntl[3] = 4;
++
++    mumps_data->icntl[5] = mumps_permuting_scaling_;
++    mumps_data->icntl[6] = mumps_pivot_order_;
++    mumps_data->icntl[7] = mumps_scaling_;
++    mumps_data->icntl[9] = 0;   //no iterative refinement iterations
++
++    mumps_data->icntl[12] = 1;   //avoid lapack bug, ensures proper inertia; mentioned to be very expensive in mumps manual
++    mumps_data->icntl[13] = mem_percent_; //% memory to allocate over expected
++    mumps_data->cntl[0] = pivtol_;  // Set pivot tolerance
++
++    // dump_matrix(mumps_data);
++
++    // MyPrintf("Calling MUMPS-1 for symbolic factorization.\n");
++    mumps_c(mumps_data);
++    // MyPrintf("Done with MUMPS-1 for symbolic factorization.\n");
++    int error = mumps_data->info[0];
++    const int& mumps_permuting_scaling_used = mumps_data->infog[22];
++    const int& mumps_pivot_order_used = mumps_data->infog[6];
++
++    //return appropriate value
++    if( error == -6 )  //system is singular
++    {
++        MyPrintf("MUMPS returned INFO(1) = %i matrix is singular.\n", error);
++        return RET_MATRIX_FACTORISATION_FAILED;
++    }
++    if( error < 0 )
++    {    
++        printf("nnz = %i\n",numNonzeros);
++        MyPrintf("Error=%i returned from MUMPS in Factorization.\n", error);
++        MyPrintf("MUMPS returned INFO(2) = %i.\n", mumps_data->info[1]);
++        return RET_MATRIX_FACTORISATION_FAILED;
++    }
++
++    //// IPOPT-MUMPS (ACTUAL FACTORIZATION)
++    // MUMPS_STRUC_C* mumps_data = static_cast<MUMPS_STRUC_C*>(mumps_ptr_);
++
++    mumps_data->job = 2;  //numerical factorization
++
++    // dump_matrix(mumps_data);
++    // MyPrintf("Calling MUMPS-2 for numerical factorization.\n");
++    mumps_c(mumps_data);
++    // MyPrintf("Done with MUMPS-2 for numerical factorization.\n");
++    error = mumps_data->info[0];
++
++    //Check for errors
++    if( error == -8 || error == -9 )  //not enough memory
++    {
++        const int trycount_max = 20;
++        for( int trycount = 0; trycount < trycount_max; trycount++ )
++        {
++            MyPrintf("MUMPS returned INFO(1) = %i and requires more memory, reallocating.  Attempt %d\n", error, trycount + 1);
++            MUMPS_INT old_mem_percent = mumps_data->icntl[13];
++            ComputeMemIncrease(mumps_data->icntl[13], 2.0 * (double)old_mem_percent, MUMPS_INT(0), "percent extra working space for MUMPS");
++            MyPrintf("Increasing icntl[13] from % to % .\n", old_mem_percent, mumps_data->icntl[13]);
++
++            // dump_matrix(mumps_data);
++            MyPrintf("Calling MUMPS-2 (repeated) for numerical factorization.\n");
++            mumps_c(mumps_data);
++            MyPrintf("Done with MUMPS-2 (repeated) for numerical factorization.\n");
++            error = mumps_data->info[0];
++            if( error != -8 && error != -9 )
++            {
++                break;
++            }
++        }
++        if( error == -8 || error == -9 )
++        {
++            MyPrintf("MUMPS was not able to obtain enough memory.\n");
++            return RET_MATRIX_FACTORISATION_FAILED;
++        }
++    }
++
++    // MyPrintf("Number of doubles for MUMPS to hold factorization (INFO(9)) = %i\n", mumps_data->info[8]);
++    // MyPrintf("Number of integers for MUMPS to hold factorization (INFO(10)) = %i\n", mumps_data->info[9]);
++
++    if( error == -10 )  //system is singular
++    {
++        MyPrintf("MUMPS returned INFO(1) = %i matrix is singular.\n", error);
++        return RET_MATRIX_FACTORISATION_FAILED;
++    }
++
++    negevals_ = mumps_data->infog[11];
++
++    if( error == -13 )
++    {
++        MyPrintf("MUMPS returned INFO(1) =%i - out of memory when trying to allocate % %s.\nIn some cases it helps to decrease the value of the option \"mumps_mem_percent\".\n",
++                     error, mumps_data->info[1] < 0 ? -mumps_data->info[1] : mumps_data->info[1],
++                     mumps_data->info[1] < 0 ? "MB" : "bytes");
++        return RET_MATRIX_FACTORISATION_FAILED;
++    }
++    if( error < 0 )  //some other error
++    {
++        MyPrintf("MUMPS returned INFO(1) =%i MUMPS failure.\n", error);
++        return RET_MATRIX_FACTORISATION_FAILED;
++    }
++
++
++	have_factorization = true;
++
++	return SUCCESSFUL_RETURN;
++}
++
++
++/*
++ *	s o l v e
++ */
++returnValue MumpsSparseSolver::solve(	int_t dim_,
++										const real_t* const rhs,
++										real_t* const sol
++										)
++{
++
++    // printf("in solve (MUMPS)\n");
++	/* consistency check */
++	if ( dim_ != dim )
++		return THROWERROR( RET_INVALID_ARGUMENTS );
++
++	if ( !have_factorization )
++	{
++	  MyPrintf("Factorization not called before solve in MumpsSparseSolver::solve.\n");
++	  return THROWERROR( RET_INVALID_ARGUMENTS );
++	}
++
++	if ( dim == 0 )
++    {
++		return SUCCESSFUL_RETURN;
++    }
++
++    // MUMPS overwrites the rhs, copy rhs to sol and pass that to the solver
++    for (int_t i=0; i<dim; ++i) sol[i] = rhs[i];
++
++
++    /// IPOPT-MUMPS
++    MUMPS_STRUC_C* mumps_data = static_cast<MUMPS_STRUC_C*>(mumps_ptr_);
++
++    mumps_data->rhs = sol;
++    mumps_data->job = 3;  //solve
++    // MyPrintf("Calling MUMPS-3 for solve.\n");
++    mumps_c(mumps_data);
++    // MyPrintf("Done with MUMPS-3 for solve.\n");
++    int error = mumps_data->info[0];
++    if( error < 0 )
++    {
++        MyPrintf("Error=%i returned from MUMPS in Solve.\n", error);
++        return THROWERROR(RET_MATRIX_FACTORISATION_FAILED);
++    }
++
++	return SUCCESSFUL_RETURN;
++}
++
++/*
++ *	r e s e t
++ */
++returnValue MumpsSparseSolver::reset( )
++{
++	/* AW: We probably want to avoid resetting factorization in QProblem */
++	if ( SparseSolver::reset( ) != SUCCESSFUL_RETURN )
++		return THROWERROR( RET_RESET_FAILED );
++
++	clear( );
++	return SUCCESSFUL_RETURN;
++}
++
++/*
++ *	g e t N e g a t i v e E i g e n v a l u e s */
++int_t MumpsSparseSolver::getNegativeEigenvalues( )
++{
++	if( !have_factorization )
++		return -1;
++	else
++		return negevals_;
++}
++
++
++// TODO(andrea: not implemented yet, default behavior)
++
++/*
++ *	g e t R a n k
++ */
++int_t MumpsSparseSolver::getRank( )
++{
++	return -1;
++}
++/*
++ *	g e t Z e r o P i v o t s
++ */
++returnValue MumpsSparseSolver::getZeroPivots( int_t *&zeroPivots )
++{
++	if ( zeroPivots ) delete[] zeroPivots;
++	zeroPivots = 0;
++	return SUCCESSFUL_RETURN;
++}
++
++
++/*****************************************************************************
++ *  P R O T E C T E D                                                        *
++ *****************************************************************************/
++
++/*
++ *	c l e a r
++ */
++returnValue MumpsSparseSolver::clear( )
++{
++	delete [] a_mumps;
++	delete [] irn_mumps;
++	delete [] jcn_mumps;
++
++	dim = -1;
++	numNonzeros = -1;
++	negevals_ = -1;
++	mumps_pivot_order_ = 0;
++
++	a_mumps = 0;
++	irn_mumps = 0;
++	jcn_mumps = 0;
++
++	have_factorization = false;
++	return SUCCESSFUL_RETURN;
++}
++
++
++/*
++ *	c o p y
++ */
++returnValue MumpsSparseSolver::copy( 	const MumpsSparseSolver& rhs
++										)
++{
++	dim = rhs.dim;
++	numNonzeros = rhs.numNonzeros;
++	negevals_ = rhs.negevals_;
++	have_factorization = rhs.have_factorization;
++
++	if ( rhs.a_mumps != 0 )
++	{
++		a_mumps = new double[numNonzeros];
++		memcpy( a_mumps,rhs.a_mumps,numNonzeros*sizeof(double) );
++	}
++	else
++		a_mumps = 0;
++
++	if ( rhs.irn_mumps != 0 )
++	{
++		irn_mumps = new fint_t[numNonzeros];
++		memcpy( irn_mumps,rhs.irn_mumps,numNonzeros*sizeof(fint_t) );
++	}
++	else
++		irn_mumps = 0;
++
++	if ( rhs.jcn_mumps != 0 )
++	{
++		jcn_mumps = new fint_t[numNonzeros];
++		memcpy( jcn_mumps,rhs.jcn_mumps,numNonzeros*sizeof(fint_t) );
++	}
++	else
++		jcn_mumps = 0;
++
++	return SUCCESSFUL_RETURN;
++}
++
++#endif /* SOLVER_MUMPS */
++
+ #ifdef SOLVER_NONE
+ 
+ returnValue DummySparseSolver::setMatrixData( 	int_t dim, /**< Dimension of the linear system. */
+diff --git a/testing/cpp/test_qrecipeSchur.cpp b/testing/cpp/test_qrecipeSchur.cpp
+index 5a03e43..3f07baa 100644
+--- a/testing/cpp/test_qrecipeSchur.cpp
++++ b/testing/cpp/test_qrecipeSchur.cpp
+@@ -87,6 +87,10 @@ int main( )
+ 	/* solve with sparse matrices (nullspace factorization) */
+ 	nWSR = 1000;
+ 	QProblem qrecipeS(180, 91);
++	/* for some reason this is necessary to pass the test when using MUMPS */ 
++#if USE_SOLVER == MUMPS
++    options.enableEqualities = BT_FALSE;
++#endif
+ 	qrecipeS.setOptions(options);
+ 	tic = getCPUtime();
+ 	qrecipeS.init(H, g, A, lb, ub, lbA, ubA, nWSR, 0);
+diff --git a/testing/cpp/test_smallSchur.cpp b/testing/cpp/test_smallSchur.cpp
+index 7a6f140..de4c8f5 100644
+--- a/testing/cpp/test_smallSchur.cpp
++++ b/testing/cpp/test_smallSchur.cpp
+@@ -70,6 +70,7 @@ int main( )
+ 	options.setToDefault();
+ 	options.printLevel = PL_TABULAR;
+ 	options.initialStatusBounds = ST_UPPER;
++	/* options.enableEqualities = BT_FALSE; */
+ 
+ 	/* create sparse matrices */
+ 	SymSparseMat *H = new SymSparseMat(n, n, H_ir, H_jc, H_val);
+@@ -91,9 +92,9 @@ int main( )
+ 
+ 	/* solve with sparse matrices (Schur complement) */
+ 	#ifndef SOLVER_NONE
+-	nWSR = 1000;
++	nWSR = 10000;
+ 	SQProblemSchur qp(n, m);
+-	qp.setOptions(options);
++	// qp.setOptions(options);
+ 	tic = getCPUtime();
+ 	qp.init(H, g, A, lb, ub, lbA, ubA, nWSR, 0);
+ 	toc = getCPUtime();
+-- 
+2.25.1
+
