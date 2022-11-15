@@ -31,3 +31,6 @@ if errorlevel 1 exit 1
 
 copy qpoases.cp*.pyd %SP_DIR%
 if errorlevel 1 exit 1
+
+# For tests
+copy .\tests\test_examples.py %RECIPE_DIR%
