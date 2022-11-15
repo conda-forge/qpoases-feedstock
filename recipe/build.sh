@@ -15,3 +15,6 @@ ctest --output-on-failure -C Release
 
 cd ../interfaces/python && python setup.py build_ext --inplace
 cp qpoases.cpython-*.so $SP_DIR
+
+# For tests
+cp ./tests/test_examples.py $RECIPE_DIR/test_examples.py 
