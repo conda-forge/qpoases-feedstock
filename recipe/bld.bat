@@ -26,11 +26,7 @@ if errorlevel 1 exit 1
 
 :: Python interface.
 cd ..\interfaces\python && python setup.py build_ext --inplace
-python -c "import qpoases"
 if errorlevel 1 exit 1
 
 copy qpoases.cp*.pyd %SP_DIR%
 if errorlevel 1 exit 1
-
-:: For tests.
-copy .\tests\test_examples.py %RECIPE_DIR%

@@ -12,13 +12,6 @@ cmake ${CMAKE_ARGS} -GNinja .. \
 cmake --build . --config Release
 cmake --build . --config Release --target install
 ctest --output-on-failure -C Release
-ls
-ls bin
 
 cd ../interfaces/python && python setup.py build_ext --inplace
 cp qpoases.cpython-*.so $SP_DIR
-
-
-# For tests
-
-cp ./tests/test_examples.py $RECIPE_DIR/test_examples.py 
