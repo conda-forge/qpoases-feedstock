@@ -33,8 +33,4 @@ copy qpoases.cp*.pyd %SP_DIR%
 if errorlevel 1 exit 1
 
 :: For tests.
-mkdir %RECIPE_DIR%\bin
-copy %SRC_DIR%\build\bin\example1 %RECIPE_DIR%\bin\
-copy %SRC_DIR%\build\bin\example1b %RECIPE_DIR%\bin\
-copy %SRC_DIR%\build\bin\example2 %RECIPE_DIR%\bin\
 copy .\tests\test_examples.py %RECIPE_DIR%

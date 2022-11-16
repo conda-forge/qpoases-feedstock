@@ -1,12 +1,12 @@
-From 7e310e669df998881db10be0237e078351b88011 Mon Sep 17 00:00:00 2001
+From df6576e8eb790d2bff916b243f60d44603ea3ceb Mon Sep 17 00:00:00 2001
 From: Fabian Schramm <55981657+fabinsch@users.noreply.github.com>
 Date: Tue, 15 Nov 2022 17:06:55 +0100
 Subject: [PATCH] fix python interface
 
 ---
  interfaces/python/setup.py               | 12 ++++++++----
- interfaces/python/tests/test_examples.py | 10 +++++-----
- 2 files changed, 13 insertions(+), 9 deletions(-)
+ interfaces/python/tests/test_examples.py | 20 +++++++++++++-------
+ 2 files changed, 21 insertions(+), 11 deletions(-)
 
 diff --git a/interfaces/python/setup.py b/interfaces/python/setup.py
 index 913f8da..a003063 100755
@@ -50,10 +50,35 @@ index 913f8da..a003063 100755
          "-D__NO_COPYRIGHT__",
      ]
 diff --git a/interfaces/python/tests/test_examples.py b/interfaces/python/tests/test_examples.py
-index a345188..ee45d8b 100644
+index a345188..89f2379 100644
 --- a/interfaces/python/tests/test_examples.py
 +++ b/interfaces/python/tests/test_examples.py
-@@ -152,8 +152,8 @@ class TestExamples(TestCase):
+@@ -45,12 +45,12 @@ qpoases_path = os.path.dirname(qpoases_path)
+ qpoases_path = os.path.dirname(qpoases_path)
+ 
+ # set qpOASES binary path
+-bin_path = os.path.join(qpoases_path, "bin")
++bin_path = os.path.join("build", "bin")
+ 
+ class TestExamples(TestCase):
+ 
+     def test_example1(self):
+-        return 0
++        # return 0
+         # Example for qpOASES main function using the QProblem class.
+         #Setup data of first QP.
+ 
+@@ -92,6 +92,9 @@ class TestExamples(TestCase):
+         objVal_actual = np.asarray(objVal_actual, dtype=float)
+ 
+         cmd = os.path.join(bin_path, "example1")
++        print("cmd: ", cmd)
++        isFile = os.path.isfile(cmd)
++        print("isFile: ", isFile)
+         p = Popen(cmd, shell=True, stdout=PIPE)
+         stdout, stderr = p.communicate()
+         stdout = str(stdout).replace('\\n', '\n')
+@@ -152,8 +155,8 @@ class TestExamples(TestCase):
          xOpt_actual = np.asarray(xOpt_actual, dtype=float)
          objVal_actual = qp.getObjVal()
          objVal_actual = np.asarray(objVal_actual, dtype=float)
@@ -64,7 +89,7 @@ index a345188..ee45d8b 100644
  
          # Solve second QP.
          nWSR = 10
-@@ -164,8 +164,8 @@ class TestExamples(TestCase):
+@@ -164,8 +167,8 @@ class TestExamples(TestCase):
          xOpt_actual = np.asarray(xOpt_actual, dtype=float)
          objVal_actual = qp.getObjVal()
          objVal_actual = np.asarray(objVal_actual, dtype=float)
@@ -75,7 +100,17 @@ index a345188..ee45d8b 100644
  
          # Get and print solution of second QP.
          xOpt_actual = np.zeros(2)
-@@ -189,7 +189,7 @@ class TestExamples(TestCase):
+@@ -175,6 +178,9 @@ class TestExamples(TestCase):
+         objVal_actual = np.asarray(objVal_actual, dtype=float)
+ 
+         cmd = os.path.join(bin_path, "example1b")
++        print("cmd: ", cmd)
++        isFile = os.path.isfile(cmd)
++        print("isFile: ", isFile)
+         p = Popen(cmd, shell=True, stdout=PIPE)
+         stdout, stderr = p.communicate()
+         stdout = str(stdout).replace('\\n', '\n')
+@@ -189,7 +195,7 @@ class TestExamples(TestCase):
  
          pattern = re.compile(r'objVal = (?P<objVal>[0-9-+e.]*)')
          match = pattern.findall(stdout)
