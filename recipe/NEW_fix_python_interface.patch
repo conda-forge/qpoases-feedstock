@@ -1,0 +1,91 @@
+From d693090a047dba0281c23bc3a2c3591325a6d53b Mon Sep 17 00:00:00 2001
+From: Fabian Schramm <55981657+fabinsch@users.noreply.github.com>
+Date: Tue, 15 Nov 2022 10:05:50 +0100
+Subject: [PATCH] fix python interface
+
+---
+ interfaces/python/setup.py | 10 ++++++----
+ make.mk                    | 18 +++++++++++++++---
+ make_linux.mk              |  4 ++--
+ 3 files changed, 23 insertions(+), 9 deletions(-)
+
+diff --git a/interfaces/python/setup.py b/interfaces/python/setup.py
+index 913f8da..2bcae3e 100755
+--- a/interfaces/python/setup.py
++++ b/interfaces/python/setup.py
+@@ -59,7 +59,9 @@ extra_params['library_dirs'] = ['/usr/lib', os.path.join(BASEDIR, 'bin')]
+ extra_params['language'] = 'c++'
+ 
+ if platform.system() in ['Linux', 'Darwin']:
+-    extra_params['extra_compile_args'] = ['-D__USE_LONG_INTEGERS__',
++    extra_params['extra_compile_args'] = [
++            # '-D__USE_LONG_INTEGERS__',
++            # '-D__USE_LONG_INTEGERS__',
+             '-D__USE_LONG_FINTS__']
+ 
+ if platform.system() == 'Darwin':
+@@ -75,7 +77,7 @@ if os.name == 'posix':
+     #      and therefore requires access to all defines made.
+     #      Therefore, we provide the CPPFLAGS from the make_linux.mk file
+     #      directly to the compile process by extra_compile_args.
+-    # NOTE not all FLAGS can be added automatically, e.g. DEF_SOLVER.
++    # NOTE not all FLAGS can be added automaticalgit ly, e.g. DEF_SOLVER.
+     #      Please fix this yourself in case of problems.
+     # TODO maybe add automatic make file parsing and choose from those options
+     extra_params['extra_compile_args'] += [
+@@ -88,8 +90,8 @@ if os.name == 'posix':
+         "-Wsign-conversion",
+         "-finline-functions",
+         "-fPIC",
+-        "-DLINUX",
+-        "-D__USE_LONG_INTEGERS__",
++        # "-D__USE_LONG_INTEGERS__",
++        # "-D__USE_LONG_INTEGERS__",
+         "-D__USE_LONG_FINTS__",
+         "-D__NO_COPYRIGHT__",
+     ]
+diff --git a/make.mk b/make.mk
+index d4b4c12..77780bb 100644
+--- a/make.mk
++++ b/make.mk
+@@ -32,7 +32,19 @@
+ 
+ TOP = $(realpath $(dir $(lastword $(MAKEFILE_LIST))))
+ 
+-include ${TOP}/make_linux.mk
++ifeq ($(OS),Windows_NT)
++$(info ************  USING WINDOWS MAKEFILE ************)
++	include ${TOP}/make_windows.mk
++else
++    UNAME_S := $(shell uname -s)
++    ifeq ($(UNAME_S),Linux)
++$(info ************  USING LINUX MAKEFILE ************)
++		include ${TOP}/make_linux.mk
++    endif
++    ifeq ($(UNAME_S),Darwin)
++$(info ************  USING MACOS MAKEFILE ************)
++		include ${TOP}/make_osx.mk
++    endif
++endif
++
+ #include ${TOP}/make_cygwin.mk
+-#include ${TOP}/make_windows.mk
+-#include ${TOP}/make_osx.mk
+diff --git a/make_linux.mk b/make_linux.mk
+index a15b52e..16909cd 100644
+--- a/make_linux.mk
++++ b/make_linux.mk
+@@ -77,8 +77,8 @@ endif
+ ################################################################################
+ # do not touch this
+ 
+-CPP = g++
+-CC  = gcc
++CPP = ${GXX}
++CC  = ${GCC}
+ AR  = ar
+ RM  = rm
+ F77 = gfortran
+-- 
+2.25.1
+

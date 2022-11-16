@@ -1,6 +1,4 @@
 #!/bin/sh
-# Ensure the version is correct in the sources
-grep 'PACKAGE_VERSION "'$PKG_VERSION'"' CMakeLists.txt
 
 mkdir build
 cd build
@@ -14,3 +12,6 @@ cmake ${CMAKE_ARGS} -GNinja .. \
 cmake --build . --config Release
 cmake --build . --config Release --target install
 ctest --output-on-failure -C Release
+
+cd ../interfaces/python && python setup.py build_ext --inplace
+cp qpoases.cpython-*.so $SP_DIR
