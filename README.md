@@ -83,20 +83,6 @@ Current build status
                 </a>
               </td>
             </tr><tr>
-              <td>osx_arm64_numpy1.20</td>
-              <td>
-                <a href="https://dev.azure.com/conda-forge/feedstock-builds/_build/latest?definitionId=15848&branchName=main">
-                  <img src="https://dev.azure.com/conda-forge/feedstock-builds/_apis/build/status/qpoases-feedstock?branchName=main&jobName=osx&configuration=osx%20osx_arm64_numpy1.20" alt="variant">
-                </a>
-              </td>
-            </tr><tr>
-              <td>osx_arm64_numpy1.21</td>
-              <td>
-                <a href="https://dev.azure.com/conda-forge/feedstock-builds/_build/latest?definitionId=15848&branchName=main">
-                  <img src="https://dev.azure.com/conda-forge/feedstock-builds/_apis/build/status/qpoases-feedstock?branchName=main&jobName=osx&configuration=osx%20osx_arm64_numpy1.21" alt="variant">
-                </a>
-              </td>
-            </tr><tr>
               <td>win_64_numpy1.20</td>
               <td>
                 <a href="https://dev.azure.com/conda-forge/feedstock-builds/_build/latest?definitionId=15848&branchName=main">

@@ -14,12 +14,6 @@ jobs:
       osx_64_numpy1.21:
         CONFIG: osx_64_numpy1.21
         UPLOAD_PACKAGES: 'True'
-      osx_arm64_numpy1.20:
-        CONFIG: osx_arm64_numpy1.20
-        UPLOAD_PACKAGES: 'True'
-      osx_arm64_numpy1.21:
-        CONFIG: osx_arm64_numpy1.21
-        UPLOAD_PACKAGES: 'True'
   timeoutInMinutes: 360
 
   steps:
