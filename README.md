@@ -1,11 +1,11 @@
-About qpoases
-=============
+About qpoases-feedstock
+=======================
+
+Feedstock license: [BSD-3-Clause](https://github.com/conda-forge/qpoases-feedstock/blob/main/LICENSE.txt)
 
 Home: https://github.com/coin-or/qpOASES
 
 Package license: LGPL-2.1-or-later
-
-Feedstock license: [BSD-3-Clause](https://github.com/conda-forge/qpoases-feedstock/blob/main/LICENSE.txt)
 
 Summary: Open-source C++ implementation of a QP (Quadratic Programming) solver with online active set strategy.
 
@@ -27,73 +27,87 @@ Current build status
         <table>
           <thead><tr><th>Variant</th><th>Status</th></tr></thead>
           <tbody><tr>
-              <td>linux_64_numpy1.20</td>
+              <td>linux_64_numpy1.22</td>
               <td>
                 <a href="https://dev.azure.com/conda-forge/feedstock-builds/_build/latest?definitionId=15848&branchName=main">
-                  <img src="https://dev.azure.com/conda-forge/feedstock-builds/_apis/build/status/qpoases-feedstock?branchName=main&jobName=linux&configuration=linux%20linux_64_numpy1.20" alt="variant">
+                  <img src="https://dev.azure.com/conda-forge/feedstock-builds/_apis/build/status/qpoases-feedstock?branchName=main&jobName=linux&configuration=linux%20linux_64_numpy1.22" alt="variant">
                 </a>
               </td>
             </tr><tr>
-              <td>linux_64_numpy1.21</td>
+              <td>linux_64_numpy1.23</td>
               <td>
                 <a href="https://dev.azure.com/conda-forge/feedstock-builds/_build/latest?definitionId=15848&branchName=main">
-                  <img src="https://dev.azure.com/conda-forge/feedstock-builds/_apis/build/status/qpoases-feedstock?branchName=main&jobName=linux&configuration=linux%20linux_64_numpy1.21" alt="variant">
+                  <img src="https://dev.azure.com/conda-forge/feedstock-builds/_apis/build/status/qpoases-feedstock?branchName=main&jobName=linux&configuration=linux%20linux_64_numpy1.23" alt="variant">
                 </a>
               </td>
             </tr><tr>
-              <td>linux_aarch64_numpy1.20</td>
+              <td>linux_aarch64_numpy1.22</td>
               <td>
                 <a href="https://dev.azure.com/conda-forge/feedstock-builds/_build/latest?definitionId=15848&branchName=main">
-                  <img src="https://dev.azure.com/conda-forge/feedstock-builds/_apis/build/status/qpoases-feedstock?branchName=main&jobName=linux&configuration=linux%20linux_aarch64_numpy1.20" alt="variant">
+                  <img src="https://dev.azure.com/conda-forge/feedstock-builds/_apis/build/status/qpoases-feedstock?branchName=main&jobName=linux&configuration=linux%20linux_aarch64_numpy1.22" alt="variant">
                 </a>
               </td>
             </tr><tr>
-              <td>linux_aarch64_numpy1.21</td>
+              <td>linux_aarch64_numpy1.23</td>
               <td>
                 <a href="https://dev.azure.com/conda-forge/feedstock-builds/_build/latest?definitionId=15848&branchName=main">
-                  <img src="https://dev.azure.com/conda-forge/feedstock-builds/_apis/build/status/qpoases-feedstock?branchName=main&jobName=linux&configuration=linux%20linux_aarch64_numpy1.21" alt="variant">
+                  <img src="https://dev.azure.com/conda-forge/feedstock-builds/_apis/build/status/qpoases-feedstock?branchName=main&jobName=linux&configuration=linux%20linux_aarch64_numpy1.23" alt="variant">
                 </a>
               </td>
             </tr><tr>
-              <td>linux_ppc64le_numpy1.20</td>
+              <td>linux_ppc64le_numpy1.22</td>
               <td>
                 <a href="https://dev.azure.com/conda-forge/feedstock-builds/_build/latest?definitionId=15848&branchName=main">
-                  <img src="https://dev.azure.com/conda-forge/feedstock-builds/_apis/build/status/qpoases-feedstock?branchName=main&jobName=linux&configuration=linux%20linux_ppc64le_numpy1.20" alt="variant">
+                  <img src="https://dev.azure.com/conda-forge/feedstock-builds/_apis/build/status/qpoases-feedstock?branchName=main&jobName=linux&configuration=linux%20linux_ppc64le_numpy1.22" alt="variant">
                 </a>
               </td>
             </tr><tr>
-              <td>linux_ppc64le_numpy1.21</td>
+              <td>linux_ppc64le_numpy1.23</td>
               <td>
                 <a href="https://dev.azure.com/conda-forge/feedstock-builds/_build/latest?definitionId=15848&branchName=main">
-                  <img src="https://dev.azure.com/conda-forge/feedstock-builds/_apis/build/status/qpoases-feedstock?branchName=main&jobName=linux&configuration=linux%20linux_ppc64le_numpy1.21" alt="variant">
+                  <img src="https://dev.azure.com/conda-forge/feedstock-builds/_apis/build/status/qpoases-feedstock?branchName=main&jobName=linux&configuration=linux%20linux_ppc64le_numpy1.23" alt="variant">
                 </a>
               </td>
             </tr><tr>
-              <td>osx_64_numpy1.20</td>
+              <td>osx_64_numpy1.22</td>
               <td>
                 <a href="https://dev.azure.com/conda-forge/feedstock-builds/_build/latest?definitionId=15848&branchName=main">
-                  <img src="https://dev.azure.com/conda-forge/feedstock-builds/_apis/build/status/qpoases-feedstock?branchName=main&jobName=osx&configuration=osx%20osx_64_numpy1.20" alt="variant">
+                  <img src="https://dev.azure.com/conda-forge/feedstock-builds/_apis/build/status/qpoases-feedstock?branchName=main&jobName=osx&configuration=osx%20osx_64_numpy1.22" alt="variant">
                 </a>
               </td>
             </tr><tr>
-              <td>osx_64_numpy1.21</td>
+              <td>osx_64_numpy1.23</td>
               <td>
                 <a href="https://dev.azure.com/conda-forge/feedstock-builds/_build/latest?definitionId=15848&branchName=main">
-                  <img src="https://dev.azure.com/conda-forge/feedstock-builds/_apis/build/status/qpoases-feedstock?branchName=main&jobName=osx&configuration=osx%20osx_64_numpy1.21" alt="variant">
+                  <img src="https://dev.azure.com/conda-forge/feedstock-builds/_apis/build/status/qpoases-feedstock?branchName=main&jobName=osx&configuration=osx%20osx_64_numpy1.23" alt="variant">
                 </a>
               </td>
             </tr><tr>
-              <td>win_64_numpy1.20</td>
+              <td>osx_arm64_numpy1.22</td>
               <td>
                 <a href="https://dev.azure.com/conda-forge/feedstock-builds/_build/latest?definitionId=15848&branchName=main">
-                  <img src="https://dev.azure.com/conda-forge/feedstock-builds/_apis/build/status/qpoases-feedstock?branchName=main&jobName=win&configuration=win%20win_64_numpy1.20" alt="variant">
+                  <img src="https://dev.azure.com/conda-forge/feedstock-builds/_apis/build/status/qpoases-feedstock?branchName=main&jobName=osx&configuration=osx%20osx_arm64_numpy1.22" alt="variant">
                 </a>
               </td>
             </tr><tr>
-              <td>win_64_numpy1.21</td>
+              <td>osx_arm64_numpy1.23</td>
               <td>
                 <a href="https://dev.azure.com/conda-forge/feedstock-builds/_build/latest?definitionId=15848&branchName=main">
-                  <img src="https://dev.azure.com/conda-forge/feedstock-builds/_apis/build/status/qpoases-feedstock?branchName=main&jobName=win&configuration=win%20win_64_numpy1.21" alt="variant">
+                  <img src="https://dev.azure.com/conda-forge/feedstock-builds/_apis/build/status/qpoases-feedstock?branchName=main&jobName=osx&configuration=osx%20osx_arm64_numpy1.23" alt="variant">
+                </a>
+              </td>
+            </tr><tr>
+              <td>win_64_numpy1.22</td>
+              <td>
+                <a href="https://dev.azure.com/conda-forge/feedstock-builds/_build/latest?definitionId=15848&branchName=main">
+                  <img src="https://dev.azure.com/conda-forge/feedstock-builds/_apis/build/status/qpoases-feedstock?branchName=main&jobName=win&configuration=win%20win_64_numpy1.22" alt="variant">
+                </a>
+              </td>
+            </tr><tr>
+              <td>win_64_numpy1.23</td>
+              <td>
+                <a href="https://dev.azure.com/conda-forge/feedstock-builds/_build/latest?definitionId=15848&branchName=main">
+                  <img src="https://dev.azure.com/conda-forge/feedstock-builds/_apis/build/status/qpoases-feedstock?branchName=main&jobName=win&configuration=win%20win_64_numpy1.23" alt="variant">
                 </a>
               </td>
             </tr>
@@ -177,7 +191,7 @@ available continuous integration services. Thanks to the awesome service provide
 [CircleCI](https://circleci.com/), [AppVeyor](https://www.appveyor.com/),
 [Drone](https://cloud.drone.io/welcome), and [TravisCI](https://travis-ci.com/)
 it is possible to build and upload installable packages to the
-[conda-forge](https://anaconda.org/conda-forge) [Anaconda-Cloud](https://anaconda.org/)
+[conda-forge](https://anaconda.org/conda-forge) [anaconda.org](https://anaconda.org/)
 channel for Linux, Windows and OSX respectively.
 
 To manage the continuous integration and simplify feedstock maintenance
