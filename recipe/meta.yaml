@@ -14,7 +14,7 @@ source:
     - fix_python_interface.patch
 
 build:
-  number: 2
+  number: 3
   run_exports:
     - {{ pin_subpackage(name, max_pin='x.x.x') }}
 
@@ -23,6 +23,7 @@ requirements:
     - cmake
     - {{ compiler('cxx') }}
     - {{ compiler('c') }}
+    - {{ stdlib("c") }}
     - ninja
     - python                                 # [build_platform != target_platform]
     - cross-python_{{ target_platform }}     # [build_platform != target_platform]
@@ -35,7 +36,6 @@ requirements:
   run:
     - python
     - {{ pin_compatible('cython') }}
-    - {{ pin_compatible('numpy') }}
 
 test:
   commands:
