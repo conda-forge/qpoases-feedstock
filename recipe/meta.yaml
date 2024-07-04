@@ -12,6 +12,7 @@ source:
     - unreleased_changes.patch
     - unreleased_changes2.patch
     - fix_python_interface.patch
+    - fix_distutils.patch
 
 build:
   number: 2
