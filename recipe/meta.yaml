@@ -33,6 +33,7 @@ requirements:
   host:
     - numpy
     - cython 0.29
+    - setuptools
 
   run:
     - python
