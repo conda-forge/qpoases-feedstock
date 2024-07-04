@@ -16,6 +16,10 @@ jobs:
         CONFIG: linux_64_numpy1.23
         UPLOAD_PACKAGES: 'True'
         DOCKER_IMAGE: quay.io/condaforge/linux-anvil-cos7-x86_64
+      linux_64_numpy1.26:
+        CONFIG: linux_64_numpy1.26
+        UPLOAD_PACKAGES: 'True'
+        DOCKER_IMAGE: quay.io/condaforge/linux-anvil-cos7-x86_64
       linux_aarch64_numpy1.22:
         CONFIG: linux_aarch64_numpy1.22
         UPLOAD_PACKAGES: 'True'
@@ -24,12 +28,20 @@ jobs:
         CONFIG: linux_aarch64_numpy1.23
         UPLOAD_PACKAGES: 'True'
         DOCKER_IMAGE: quay.io/condaforge/linux-anvil-aarch64
+      linux_aarch64_numpy1.26:
+        CONFIG: linux_aarch64_numpy1.26
+        UPLOAD_PACKAGES: 'True'
+        DOCKER_IMAGE: quay.io/condaforge/linux-anvil-aarch64
       linux_ppc64le_numpy1.22:
         CONFIG: linux_ppc64le_numpy1.22
         UPLOAD_PACKAGES: 'True'
         DOCKER_IMAGE: quay.io/condaforge/linux-anvil-ppc64le
       linux_ppc64le_numpy1.23:
         CONFIG: linux_ppc64le_numpy1.23
+        UPLOAD_PACKAGES: 'True'
+        DOCKER_IMAGE: quay.io/condaforge/linux-anvil-ppc64le
+      linux_ppc64le_numpy1.26:
+        CONFIG: linux_ppc64le_numpy1.26
         UPLOAD_PACKAGES: 'True'
         DOCKER_IMAGE: quay.io/condaforge/linux-anvil-ppc64le
   timeoutInMinutes: 360
