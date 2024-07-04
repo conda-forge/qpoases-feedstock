@@ -12,9 +12,10 @@ source:
     - unreleased_changes.patch
     - unreleased_changes2.patch
     - fix_python_interface.patch
+    - fix_distutils.patch
 
 build:
-  number: 2
+  number: 3
   run_exports:
     - {{ pin_subpackage(name, max_pin='x.x.x') }}
 
@@ -23,14 +24,17 @@ requirements:
     - cmake
     - {{ compiler('cxx') }}
     - {{ compiler('c') }}
+    - {{ stdlib("c") }}
     - ninja
     - python                                 # [build_platform != target_platform]
     - cross-python_{{ target_platform }}     # [build_platform != target_platform]
-    - cython                                 # [build_platform != target_platform]
+    - numpy                                  # [build_platform != target_platform]
+    - cython 0.29                            # [build_platform != target_platform]
 
   host:
     - numpy
-    - cython
+    - cython 0.29
+    - setuptools
 
   run:
     - python
