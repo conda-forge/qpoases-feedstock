@@ -9,6 +9,6 @@ channel_targets:
 cxx_compiler:
 - vs2019
 numpy:
-- '1.23'
+- '2.0'
 target_platform:
 - win-64

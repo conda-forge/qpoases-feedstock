@@ -15,7 +15,7 @@ source:
     - fix_distutils.patch
 
 build:
-  number: 3
+  number: 4
   run_exports:
     - {{ pin_subpackage(name, max_pin='x.x.x') }}
 
@@ -39,7 +39,6 @@ requirements:
   run:
     - python
     - {{ pin_compatible('cython') }}
-    - {{ pin_compatible('numpy') }}
 
 test:
   commands:
