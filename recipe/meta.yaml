@@ -30,11 +30,11 @@ requirements:
     - python                                 # [build_platform != target_platform]
     - cross-python_{{ target_platform }}     # [build_platform != target_platform]
     - numpy                                  # [build_platform != target_platform]
-    - cython                                 # [build_platform != target_platform]
+    - cython 2.*                             # [build_platform != target_platform]
 
   host:
     - numpy
-    - cython
+    - cython 2.*
     - setuptools
 
   run:
