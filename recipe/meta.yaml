@@ -13,6 +13,7 @@ source:
     - unreleased_changes2.patch
     - fix_python_interface.patch
     - fix_distutils.patch
+    - cython3_support.patch
 
 build:
   number: 4
