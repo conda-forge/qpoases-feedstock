@@ -23,10 +23,3 @@ if errorlevel 1 exit 1
 :: Test.
 ctest --output-on-failure -C Release
 if errorlevel 1 exit 1
-
-:: Python interface.
-cd ..\interfaces\python && python setup.py build_ext --inplace
-if errorlevel 1 exit 1
-
-copy qpoases.cp*.pyd %SP_DIR%
-if errorlevel 1 exit 1
